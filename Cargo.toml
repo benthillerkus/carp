@@ -9,6 +9,7 @@ repository = "https://github.com/benthillerkus/karten"
 
 [dependencies]
 clap = { version = "4.0.32", features = ["derive"] }
+csv = "1.1.6"
 mtpng = "0.3.5"
 piet-common = { version = "0.6.0" }
 
