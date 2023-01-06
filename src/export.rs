@@ -6,11 +6,14 @@ use mtpng::{
 };
 use piet_common::BitmapTarget;
 
-use crate::{HEIGHT, WIDTH};
-
-pub fn export(bitmap: &mut BitmapTarget, writer: impl Write) -> Result<(), Box<dyn Error>> {
+pub fn export(
+    bitmap: &mut BitmapTarget,
+    width: u32,
+    height: u32,
+    writer: impl Write,
+) -> Result<(), Box<dyn Error>> {
     let mut header = Header::new();
-    header.set_size(WIDTH, HEIGHT)?;
+    header.set_size(width, height)?;
     header.set_color(ColorType::TruecolorAlpha, 8)?;
     let options = Options::new();
     let mut encoder = Encoder::new(writer, &options);

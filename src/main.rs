@@ -6,13 +6,11 @@ use piet_common::{
 };
 use std::{error::Error, fs::File, path::PathBuf};
 
-const WIDTH: u32 = 4096;
-const HEIGHT: u32 = 4096;
 const ROWS: u32 = 7;
 const COLUMNS: u32 = 10;
 const NUM_CARDS: u32 = ROWS * COLUMNS;
-const CARD_WIDTH: f64 = WIDTH as f64 / COLUMNS as f64;
-const CARD_HEIGHT: f64 = HEIGHT as f64 / ROWS as f64;
+const BASE_RESOLUTION: u32 = 4096;
+const CARD_HEIGHT: f64 = BASE_RESOLUTION as f64 / ROWS as f64;
 
 mod export;
 use export::export;
@@ -22,20 +20,24 @@ use export::export;
 struct Args {
     #[arg(short, long, default_value = "export/deck.png")]
     output: PathBuf,
+
+    #[arg(short, long, default_value_t = 5./7.2)]
+    aspect_ratio: f64,
+
+    #[arg(short, long, default_value_t = BASE_RESOLUTION)]
+    resolution: u32,
 }
 
 struct CardInfo {
     index: u32,
-    x: f64,
-    y: f64,
+    number: u32,
 }
 
 impl CardInfo {
     fn new(index: u32) -> Self {
         Self {
             index,
-            x: (index % COLUMNS) as f64 * CARD_WIDTH,
-            y: (index / COLUMNS) as f64 * CARD_HEIGHT,
+            number: index + 1,
         }
     }
 }
@@ -48,9 +50,20 @@ struct DrawableCard {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
+    let deck_height = args.resolution;
+    let actual_card_height = args.resolution as f64 / ROWS as f64;
+    let actual_card_width = actual_card_height * args.aspect_ratio;
+    let deck_width = (actual_card_width * COLUMNS as f64) as u32;
+    #[allow(non_snake_case)]
+    let CARD_WIDTH = CARD_HEIGHT * args.aspect_ratio;
+
     let writer = File::create(args.output)?;
     let mut device = Device::new()?;
-    let mut bitmap = device.bitmap_target(WIDTH as usize, HEIGHT as usize, 1.0)?;
+    let mut bitmap = device.bitmap_target(
+        deck_width as usize,
+        deck_height as usize,
+        args.resolution as f64 / BASE_RESOLUTION as f64,
+    )?;
     let mut ctx = bitmap.render_context();
 
     let font = ctx
@@ -72,7 +85,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|info| {
             let index_text = ctx
                 .text()
-                .new_text_layout(format!("{}", info.index))
+                .new_text_layout(format!("{}", info.number))
                 .font(font.clone(), 36.)
                 .alignment(TextAlignment::Center)
                 .text_color(Color::RED)
@@ -84,10 +97,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect();
 
+    let card_area = Rect::from_origin_size((0., 0.), (CARD_WIDTH, CARD_HEIGHT));
     for card in cards {
         ctx.with_save(|ctx| {
-            ctx.transform(Affine::translate((card.info.x, card.info.y)));
-            let rect = Rect::from_origin_size((0., 0.), (CARD_WIDTH, CARD_HEIGHT));
+            ctx.transform(Affine::translate((
+                (card.info.index % COLUMNS) as f64 * CARD_WIDTH,
+                (card.info.index / COLUMNS) as f64 * CARD_HEIGHT,
+            )));
             let grad = LinearGradient::new(UnitPoint::TOP, UnitPoint::BOTTOM, {
                 if card.info.index % 2 == 0 {
                     (Color::WHITE, Color::BLACK)
@@ -95,10 +111,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                     (Color::BLACK, Color::WHITE)
                 }
             });
-            ctx.fill(rect, &grad);
+            ctx.fill(card_area, &grad);
             ctx.draw_text(&card.index_text, (0., CARD_HEIGHT - 64.));
-            let border = RoundedRect::from_rect(rect, 21.);
-            ctx.stroke(border, &Color::RED, 4.);
+            let border = RoundedRect::from_rect(card_area, 20.);
+            // TODO: TTS actually distorts the border for rounded rects on non 5/7.2 aspect ratio cards
+            // so our border should either get distorted too (do a scale before drawing the border)
+            // or we just use the TTS rects and use transparency for the "roundedness"
+            ctx.stroke(border, &Color::RED, 8.);
             Ok(())
         })?;
     }
@@ -107,7 +126,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     drop(ctx);
 
     println!("Saving to file...");
-    export(&mut bitmap, writer)?;
+    export(&mut bitmap, deck_width, deck_height, writer)?;
     println!("Done!");
     Ok(())
 }
