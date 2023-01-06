@@ -10,7 +10,7 @@ const ROWS: u32 = 7;
 const COLUMNS: u32 = 10;
 const NUM_CARDS: u32 = ROWS * COLUMNS;
 const BASE_RESOLUTION: u32 = 4096;
-const CARD_HEIGHT: f64 = BASE_RESOLUTION as f64 / ROWS as f64;
+const BASE_ASPECT_RATIO: f64 = 5. / 7.2;
 
 mod export;
 use export::export;
@@ -21,9 +21,14 @@ struct Args {
     #[arg(short, long, default_value = "export/deck.png")]
     output: PathBuf,
 
-    #[arg(short, long, default_value_t = 5./7.2)]
+    /// The aspect ratio of a single card. Defaults to 5w/7.2h.
+    /// 1.0 is square, 2.0 is twice as wide as it is tall, etc.
+    #[arg(short, long, default_value_t = BASE_ASPECT_RATIO)]
     aspect_ratio: f64,
 
+    /// The image resolution for the deck. Defaults to 4096x4096.
+    /// On non-square aspect ratios, this value determines the longer side,
+    /// so the image can never be larger than resolution².
     #[arg(short, long, default_value_t = BASE_RESOLUTION)]
     resolution: u32,
 }
@@ -50,20 +55,40 @@ struct DrawableCard {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let deck_height = args.resolution;
-    let actual_card_height = args.resolution as f64 / ROWS as f64;
-    let actual_card_width = actual_card_height * args.aspect_ratio;
-    let deck_width = (actual_card_width * COLUMNS as f64) as u32;
-    #[allow(non_snake_case)]
-    let CARD_WIDTH = CARD_HEIGHT * args.aspect_ratio;
+    let deck_height;
+    let deck_width;
+    let card_height;
+    let card_width;
+    let pix_scale;
+
+    if args.aspect_ratio > BASE_ASPECT_RATIO {
+        // The deck is wider than it is tall.
+        deck_width = args.resolution;
+        let actual_card_width = deck_width as f64 / COLUMNS as f64;
+        let actual_card_height = actual_card_width / args.aspect_ratio;
+        deck_height = (actual_card_height * ROWS as f64) as u32;
+        pix_scale = deck_height as f64 / BASE_RESOLUTION as f64;
+        card_width = (BASE_RESOLUTION as f64 / COLUMNS as f64) / pix_scale;
+        card_height = card_width / args.aspect_ratio;
+    } else if args.aspect_ratio == BASE_ASPECT_RATIO {
+        deck_height = args.resolution;
+        deck_width = args.resolution;
+        pix_scale = args.resolution as f64 / BASE_RESOLUTION as f64;
+        card_width = BASE_RESOLUTION as f64 / COLUMNS as f64;
+        card_height = BASE_RESOLUTION as f64 / ROWS as f64;
+    } else {
+        deck_height = args.resolution;
+        let actual_card_height = deck_height as f64 / ROWS as f64;
+        let actual_card_width = actual_card_height * args.aspect_ratio;
+        deck_width = (actual_card_width * COLUMNS as f64) as u32;
+        pix_scale = deck_width as f64 / BASE_RESOLUTION as f64;
+        card_height = (BASE_RESOLUTION as f64 / ROWS as f64) / pix_scale;
+        card_width = card_height * args.aspect_ratio;
+    }
 
     let writer = File::create(args.output)?;
     let mut device = Device::new()?;
-    let mut bitmap = device.bitmap_target(
-        deck_width as usize,
-        deck_height as usize,
-        args.resolution as f64 / BASE_RESOLUTION as f64,
-    )?;
+    let mut bitmap = device.bitmap_target(deck_width as usize, deck_height as usize, pix_scale)?;
     let mut ctx = bitmap.render_context();
 
     let font = ctx
@@ -77,7 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .font(font.clone(), 24.)
         .alignment(TextAlignment::Justified)
         .text_color(Color::RED)
-        .max_width(CARD_WIDTH)
+        .max_width(card_width)
         .build()?;
 
     let cards: Vec<_> = (0..NUM_CARDS)
@@ -89,7 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .font(font.clone(), 36.)
                 .alignment(TextAlignment::Center)
                 .text_color(Color::RED)
-                .max_width(CARD_WIDTH)
+                .max_width(card_width)
                 .build()
                 .unwrap_or_else(|_| error_text.clone());
 
@@ -97,12 +122,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect();
 
-    let card_area = Rect::from_origin_size((0., 0.), (CARD_WIDTH, CARD_HEIGHT));
+    let card_area = Rect::from_origin_size((0., 0.), (card_width, card_height));
     for card in cards {
         ctx.with_save(|ctx| {
             ctx.transform(Affine::translate((
-                (card.info.index % COLUMNS) as f64 * CARD_WIDTH,
-                (card.info.index / COLUMNS) as f64 * CARD_HEIGHT,
+                (card.info.index % COLUMNS) as f64 * card_width,
+                (card.info.index / COLUMNS) as f64 * card_height,
             )));
             let grad = LinearGradient::new(UnitPoint::TOP, UnitPoint::BOTTOM, {
                 if card.info.index % 2 == 0 {
@@ -112,7 +137,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             });
             ctx.fill(card_area, &grad);
-            ctx.draw_text(&card.index_text, (0., CARD_HEIGHT - 64.));
+            ctx.draw_text(&card.index_text, (0., card_height - 64.));
             let border = RoundedRect::from_rect(card_area, 20.);
             // TODO: TTS actually distorts the border for rounded rects on non 5/7.2 aspect ratio cards
             // so our border should either get distorted too (do a scale before drawing the border)
