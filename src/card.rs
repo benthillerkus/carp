@@ -1,6 +1,6 @@
-use crate::DrawableCard;
+use karten::DrawableCard;
 use piet_common::{
-    kurbo::{Point, Rect, RoundedRect, Size},
+    kurbo::{Point, RoundedRect},
     *,
 };
 
@@ -14,7 +14,7 @@ impl DrawableCard for Card {
         self.index
     }
 
-    fn draw(self, ctx: &mut impl RenderContext, area: &RoundedRect) {
+    fn draw(&self, ctx: &mut impl RenderContext, area: &RoundedRect) {
         let bebas_neue = ctx
             .text()
             .font_family("Bebas Neue")
@@ -25,7 +25,7 @@ impl DrawableCard for Card {
         ctx.fill(area, &Color::WHITE);
         let text = ctx
             .text()
-            .new_text_layout(self.text)
+            .new_text_layout(self.text.clone())
             .font(bebas_neue.clone(), 42.)
             .alignment(TextAlignment::Center)
             .text_color(Color::BLACK)
