@@ -4,13 +4,11 @@ use piet_common::FontFamily;
 
 use crate::{card::Card, Import};
 
-pub struct Importer {
-    font: FontFamily,
-}
+pub struct Importer {}
 
 impl Importer {
-    pub fn new(font: FontFamily) -> Self {
-        Self { font }
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
@@ -26,7 +24,6 @@ impl Import<Card> for Importer {
                 text: r
                     .get(0)
                     .map_or_else(|| String::from("COULDN'T IMPORT"), |s| s.to_owned()),
-                font: self.font.clone(),
             })
             .collect();
 

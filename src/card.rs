@@ -7,7 +7,6 @@ use piet_common::{
 pub struct Card {
     pub index: u32,
     pub text: String,
-    pub font: FontFamily,
 }
 
 impl DrawableCard for Card {
@@ -16,13 +15,18 @@ impl DrawableCard for Card {
     }
 
     fn draw(self, ctx: &mut impl RenderContext, area: &RoundedRect) {
+        let bebas_neue = ctx
+            .text()
+            .font_family("Bebas Neue")
+            .unwrap_or(FontFamily::MONOSPACE);
+
         let border = Point::new(24.0, 64.0);
 
         ctx.fill(area, &Color::WHITE);
         let text = ctx
             .text()
             .new_text_layout(self.text)
-            .font(self.font.clone(), 42.)
+            .font(bebas_neue.clone(), 42.)
             .alignment(TextAlignment::Center)
             .text_color(Color::BLACK)
             .max_width(area.width() - border.x * 2.0)
@@ -34,7 +38,7 @@ impl DrawableCard for Card {
         let number = ctx
             .text()
             .new_text_layout(format!("{}", self.index + 1))
-            .font(self.font, 24.)
+            .font(bebas_neue, 24.)
             .alignment(TextAlignment::Center)
             .text_color(Color::BLACK)
             .max_width(area.width())

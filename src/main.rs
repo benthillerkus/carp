@@ -79,17 +79,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         card_width = card_height * args.aspect_ratio;
     }
 
-    let writer = File::create(args.output)?;
     let mut device = Device::new()?;
     let mut bitmap = device.bitmap_target(deck_width as usize, deck_height as usize, pix_scale)?;
     let mut ctx = bitmap.render_context();
 
-    let bebas_neue = ctx
-        .text()
-        .font_family("Bebas Neue")
-        .unwrap_or(FontFamily::MONOSPACE);
-
-    let cards = Importer::new(bebas_neue).import()?;
+    let cards = Importer::new().import()?;
 
     let card_area = Rect::from_origin_size((0., 0.), (card_width, card_height));
     let border = RoundedRect::from_rect(card_area, 20.);
@@ -109,6 +103,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     drop(ctx);
 
     println!("Saving to file...");
+    let writer = File::create(args.output)?;
     export(&mut bitmap, deck_width, deck_height, writer)?;
     println!("Done!");
     Ok(())
