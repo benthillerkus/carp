@@ -23,34 +23,43 @@ impl<Card: DrawableCard> Deck<Card> {
         Self { dimensions, cards }
     }
 
-    pub fn render(self, device: &mut Device) -> Result<Vec<ImageBuf>, Box<dyn Error>> {
-        let mut sheets = Vec::new();
-        for chunk in self.cards.chunks((ROWS * COLUMNS) as usize) {
-            let mut bitmap = device.bitmap_target(
-                self.dimensions.width as usize,
-                self.dimensions.height as usize,
-                self.dimensions.pix_scale,
-            )?;
-            let mut ctx = bitmap.render_context();
+    pub fn render<'a>(
+        &'a self,
+        device: &'a mut Device,
+    ) -> impl Iterator<Item = Result<ImageBuf, Box<dyn Error>>> + '_ {
+        self.cards
+            .chunks((ROWS * COLUMNS) as usize)
+            .map(|chunk| self.render_sheet(device, chunk))
+    }
 
-            let card_area = Rect::from_origin_size((0., 0.), self.dimensions.card);
-            let border = RoundedRect::from_rect(card_area, 20.);
-            for card in chunk {
-                ctx.with_save(|ctx| {
-                    ctx.transform(Affine::translate((
-                        (card.index() % COLUMNS) as f64 * self.dimensions.card.width,
-                        (card.index() / COLUMNS) as f64 * self.dimensions.card.height,
-                    )));
-                    ctx.clip(border);
-                    card.draw(ctx, &border);
-                    Ok(())
-                })?;
-            }
+    fn render_sheet<'a>(
+        &'a self,
+        device: &'a mut Device,
+        cards: &'a [Card],
+    ) -> Result<ImageBuf, Box<dyn Error>> {
+        let mut bitmap = device.bitmap_target(
+            self.dimensions.width as usize,
+            self.dimensions.height as usize,
+            self.dimensions.pix_scale,
+        )?;
+        let mut ctx = bitmap.render_context();
 
-            ctx.finish()?;
-            drop(ctx);
-            sheets.push(bitmap.to_image_buf(piet_common::ImageFormat::RgbaPremul)?);
+        let card_area = Rect::from_origin_size((0., 0.), self.dimensions.card);
+        let border = RoundedRect::from_rect(card_area, 20.);
+        for card in cards {
+            ctx.with_save(|ctx| {
+                ctx.transform(Affine::translate((
+                    (card.index() % COLUMNS) as f64 * self.dimensions.card.width,
+                    (card.index() / COLUMNS) as f64 * self.dimensions.card.height,
+                )));
+                ctx.clip(border);
+                card.draw(ctx, &border);
+                Ok(())
+            })?;
         }
-        Ok(sheets)
+
+        ctx.finish()?;
+        drop(ctx);
+        Ok(bitmap.to_image_buf(piet_common::ImageFormat::RgbaPremul)?)
     }
 }

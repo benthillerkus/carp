@@ -40,10 +40,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut device = Device::new()?;
 
     let cards = Importer::new().import()?;
-    let sheets = deck::Deck::new(dimensions, cards).render(&mut device)?;
+    let deck = deck::Deck::new(dimensions, cards);
 
     eprintln!("Saving to file...");
-    for sheet in sheets {
+    for sheet in deck.render(&mut device).filter_map(Result::ok) {
         let writer = File::create(&args.output)?;
         export(&sheet, writer)?;
     }
