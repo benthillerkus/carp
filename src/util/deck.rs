@@ -31,14 +31,14 @@ impl<Card: DrawableCard> Deck<Card> {
             .chunks((ROWS * COLUMNS) as usize)
             .map(move |chunk| {
                 renderer.create_sheet(|ctx, dimensions| {
-                    Self::render_sheet(ctx, &dimensions, chunk, false)
+                    Self::render_sheet(ctx, dimensions, chunk, false)
                 })
             });
 
         let back = if let Some(backside) = &self.backside {
             let back = (0..1).map(move |_| {
                 renderer.create_card(|ctx, dimensions| {
-                    backside.draw_back(ctx, &dimensions.card.to_rect().to_rounded_rect(20.));
+                    backside.draw_back(ctx, dimensions);
                     Ok(())
                 })
             });
@@ -50,7 +50,7 @@ impl<Card: DrawableCard> Deck<Card> {
                 .chunks((ROWS * COLUMNS) as usize)
                 .map(move |chunk| {
                     renderer.create_sheet(|ctx, dimensions| {
-                        Self::render_sheet(ctx, &dimensions, chunk, true)
+                        Self::render_sheet(ctx, dimensions, chunk, true)
                     })
                 });
 
@@ -76,9 +76,9 @@ impl<Card: DrawableCard> Deck<Card> {
                 )));
                 ctx.clip(border);
                 if draw_back {
-                    card.draw_back(ctx, &border);
+                    card.draw_back(ctx, dimensions);
                 } else {
-                    card.draw(ctx, &border);
+                    card.draw(ctx, dimensions);
                 }
                 Ok(())
             })?;

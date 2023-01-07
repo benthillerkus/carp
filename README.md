@@ -16,3 +16,4 @@ If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](h
  - remove Importer
 - generate lua
 - use trait for exporter aswell?
+- define renderer for other platforms

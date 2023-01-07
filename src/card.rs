@@ -1,8 +1,5 @@
-use karten::DrawableCard;
-use piet_common::{
-    kurbo::{Point, RoundedRect},
-    *,
-};
+use karten::{dimensions::Dimensions, DrawableCard};
+use piet_common::{kurbo::Point, *};
 
 #[derive(Default)]
 pub struct Card {
@@ -15,13 +12,14 @@ impl DrawableCard for Card {
         self.index
     }
 
-    fn draw(&self, ctx: &mut impl RenderContext, area: &RoundedRect) {
+    fn draw(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions) {
         let bebas_neue = ctx
             .text()
             .font_family("Bebas Neue")
             .unwrap_or(FontFamily::MONOSPACE);
 
         let border = Point::new(24.0, 64.0);
+        let area = dimensions.card.to_rect();
 
         ctx.fill(area, &Color::WHITE);
         let text = ctx
@@ -54,7 +52,8 @@ impl DrawableCard for Card {
         ctx.stroke(area, &Color::grey(0.8), 8.);
     }
 
-    fn draw_back(&self, ctx: &mut impl RenderContext, area: &RoundedRect) {
+    fn draw_back(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions) {
+        let area = dimensions.card.to_rect();
         let bebas_neue = ctx
             .text()
             .font_family("Bebas Neue")

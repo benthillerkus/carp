@@ -7,15 +7,14 @@ use std::error::Error;
 pub trait Render: Clone {
     type Context<'a>: RenderContext;
     type Output;
-    fn create_sheet<F: FnOnce(&mut Self::Context<'_>, Dimensions) -> Result<(), Box<dyn Error>>>(
+    fn create_sheet<F: FnOnce(&mut Self::Context<'_>, &Dimensions) -> Result<(), Box<dyn Error>>>(
         &self,
         draw: F,
     ) -> Result<Self::Output, Box<dyn Error>>;
-    fn create_card<F: FnOnce(&mut Self::Context<'_>, Dimensions) -> Result<(), Box<dyn Error>>>(
+    fn create_card<F: FnOnce(&mut Self::Context<'_>, &Dimensions) -> Result<(), Box<dyn Error>>>(
         &self,
         draw: F,
     ) -> Result<Self::Output, Box<dyn Error>>;
-    fn dimensions(&self) -> Dimensions;
 }
 
 pub struct ImageRenderer<T: RenderContext> {
@@ -49,7 +48,9 @@ impl Render for ImageRenderer<D2DRenderContext<'_>> {
     type Context<'a> = D2DRenderContext<'a>;
     type Output = ImageBuf;
 
-    fn create_sheet<F: FnOnce(&mut Self::Context<'_>, Dimensions) -> Result<(), Box<dyn Error>>>(
+    fn create_sheet<
+        F: FnOnce(&mut Self::Context<'_>, &Dimensions) -> Result<(), Box<dyn Error>>,
+    >(
         &self,
         draw: F,
     ) -> Result<Self::Output, Box<dyn Error>> {
@@ -62,18 +63,14 @@ impl Render for ImageRenderer<D2DRenderContext<'_>> {
 
         let mut ctx: Self::Context<'_> = bitmap.render_context();
 
-        draw(&mut ctx, self.dimensions)?;
+        draw(&mut ctx, &self.dimensions)?;
         ctx.finish()?;
         drop(ctx);
         let image = bitmap.to_image_buf(piet_common::ImageFormat::RgbaPremul)?;
         Ok(image)
     }
 
-    fn dimensions(&self) -> Dimensions {
-        self.dimensions
-    }
-
-    fn create_card<F: FnOnce(&mut Self::Context<'_>, Dimensions) -> Result<(), Box<dyn Error>>>(
+    fn create_card<F: FnOnce(&mut Self::Context<'_>, &Dimensions) -> Result<(), Box<dyn Error>>>(
         &self,
         draw: F,
     ) -> Result<Self::Output, Box<dyn Error>> {
@@ -86,7 +83,7 @@ impl Render for ImageRenderer<D2DRenderContext<'_>> {
 
         let mut ctx: Self::Context<'_> = bitmap.render_context();
 
-        draw(&mut ctx, self.dimensions)?;
+        draw(&mut ctx, &self.dimensions)?;
         ctx.finish()?;
         drop(ctx);
         let image = bitmap.to_image_buf(piet_common::ImageFormat::RgbaPremul)?;

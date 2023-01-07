@@ -1,5 +1,7 @@
-use piet_common::{kurbo::RoundedRect, RenderContext};
+use piet_common::RenderContext;
 use std::error::Error;
+
+use self::dimensions::Dimensions;
 
 pub mod deck;
 pub mod device;
@@ -15,9 +17,9 @@ pub const COLUMNS: u32 = 10;
 pub trait DrawableCard {
     fn index(&self) -> u32;
 
-    fn draw(&self, ctx: &mut impl RenderContext, area: &RoundedRect);
+    fn draw(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions);
 
-    fn draw_back(&self, ctx: &mut impl RenderContext, area: &RoundedRect);
+    fn draw_back(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions);
 }
 
 pub trait Import<T: DrawableCard> {
