@@ -1,6 +1,6 @@
+use card::Card;
 use clap::Parser;
 use karten::Import;
-use piet_common::Device;
 use std::{error::Error, fs::File, path::PathBuf};
 
 const BASE_RESOLUTION: u32 = 4096;
@@ -13,11 +13,13 @@ mod import;
 use import::Importer;
 mod deck;
 use deck::dimensions::Dimensions;
+mod device;
+use device::Pool;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
-    #[arg(short, long, default_value = "export/deck.png")]
+    #[arg(short, long, default_value = "export/FFFF")]
     output: PathBuf,
 
     /// The aspect ratio of a single card. Defaults to 5w/7.2h.
@@ -37,16 +39,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
-    let mut device = Device::new()?;
-
     let cards = Importer::new().import()?;
-    let deck = deck::Deck::new(dimensions, cards);
+    let deck = deck::Deck::new(dimensions, cards, Some(Card::default()), "deck".to_string());
 
-    eprintln!("Saving to file...");
-    for sheet in deck.render(&mut device).filter_map(Result::ok) {
-        let writer = File::create(&args.output)?;
+    let pool = Pool::new();
+
+    for (index, sheet) in deck.render(pool).filter_map(Result::ok).enumerate() {
+        let writer = File::create(
+            args.output
+                .with_file_name(format!("{}-{index}.png", deck.name)),
+        )?;
         export(&sheet, writer)?;
     }
-    eprintln!("Done!");
+
     Ok(())
 }

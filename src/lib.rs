@@ -5,6 +5,8 @@ pub trait DrawableCard {
     fn index(&self) -> u32;
 
     fn draw(&self, ctx: &mut impl RenderContext, area: &RoundedRect);
+
+    fn draw_back(&self, ctx: &mut impl RenderContext, area: &RoundedRect);
 }
 
 pub trait Import<T: DrawableCard> {

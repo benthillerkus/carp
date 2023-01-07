@@ -4,6 +4,7 @@ use piet_common::{
     *,
 };
 
+#[derive(Default)]
 pub struct Card {
     pub index: u32,
     pub text: String,
@@ -50,6 +51,30 @@ impl DrawableCard for Card {
         // TODO: TTS actually distorts the border for rounded rects on non 5/7.2 aspect ratio cards
         // so our border should either get distorted too (do a scale before drawing the border)
         // or we just use the TTS rects and use transparency for the "roundedness"
-        ctx.stroke(area, &Color::BLACK, 8.);
+        ctx.stroke(area, &Color::grey(0.8), 8.);
+    }
+
+    fn draw_back(&self, ctx: &mut impl RenderContext, area: &RoundedRect) {
+        let bebas_neue = ctx
+            .text()
+            .font_family("Bebas Neue")
+            .unwrap_or(FontFamily::MONOSPACE);
+
+        let text = ctx
+            .text()
+            .new_text_layout("schlimm")
+            .font(bebas_neue, 64.)
+            .alignment(TextAlignment::Center)
+            .text_color(Color::grey(0.8))
+            .max_width(area.width())
+            .build()
+            .unwrap();
+
+        ctx.fill(area, &Color::WHITE);
+        ctx.draw_text(
+            &text,
+            (0.0, area.height() / 2.0 - text.image_bounds().height()),
+        );
+        ctx.stroke(area, &Color::grey(0.8), 8.);
     }
 }
