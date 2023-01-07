@@ -7,11 +7,12 @@ use karten::{
     renderer::ImageRenderer,
     BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
-use std::{error::Error, path::PathBuf};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
 
-mod import_csv;
 mod karte;
-use import_csv::CsvImporter;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -37,9 +38,25 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
-    let prompts = CsvImporter::new("prompts.csv").import()?;
+    let prompts = import("prompts.csv")?
+        .iter()
+        .enumerate()
+        .map(|(index, text)| Karte {
+            index: index as u32,
+            text: text.to_owned(),
+            alternate_style: false,
+        })
+        .collect();
     let prompts = Deck::new(prompts, Some(Karte::default()), "prompts".to_string());
-    let quips = CsvImporter::new("quips.csv").import()?;
+    let quips = import("quips.csv")?
+        .iter()
+        .enumerate()
+        .map(|(index, text)| Karte {
+            index: index as u32,
+            text: text.to_owned(),
+            alternate_style: false,
+        })
+        .collect();
     let quips = Deck::new(quips, Some(Karte::default()), "quips".to_string());
     let renderer = ImageRenderer::new(dimensions);
 
@@ -55,4 +72,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+pub fn import(path: impl AsRef<Path>) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut reader = csv::Reader::from_path(path)?;
+    let cards = reader
+        .records()
+        .filter_map(|r| r.ok())
+        .map(|r| {
+            r.get(0)
+                .map_or_else(|| String::from("COULDN'T IMPORT"), |s| s.to_owned())
+        })
+        .collect();
+
+    Ok(cards)
 }

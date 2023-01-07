@@ -5,6 +5,7 @@ use piet_common::{kurbo::Point, *};
 pub struct Karte {
     pub index: u32,
     pub text: String,
+    pub alternate_style: bool,
 }
 
 impl Card for Karte {
