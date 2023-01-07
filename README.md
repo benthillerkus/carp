@@ -11,7 +11,6 @@ If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](h
 - render `%` as _____
   - render *italics*
 - split into two crates
-  - remove Importer
 - generate lua
 - add renderers for the other platforms `piet_common` supports
 - fix error handling

@@ -1,6 +1,4 @@
 use piet_common::RenderContext;
-use std::error::Error;
-
 use self::dimensions::Dimensions;
 
 pub mod deck;
@@ -21,8 +19,4 @@ pub trait Card {
     fn draw(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions);
 
     fn draw_back(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions);
-}
-
-pub trait Import<T: Card> {
-    fn import(&mut self) -> Result<Vec<T>, Box<dyn Error>>;
 }

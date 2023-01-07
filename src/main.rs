@@ -5,7 +5,7 @@ use karten::{
     dimensions::Dimensions,
     export::{Export, PNGExporter},
     renderer::ImageRenderer,
-    Import, BASE_ASPECT_RATIO, BASE_RESOLUTION,
+    BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
 use std::{error::Error, path::PathBuf};
 

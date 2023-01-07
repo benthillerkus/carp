@@ -1,8 +1,5 @@
-use std::{error::Error, path::PathBuf};
-
-use karten::Import;
-
 use crate::karte::Karte;
+use std::{error::Error, path::PathBuf};
 
 pub struct CsvImporter {
     pub path: PathBuf,
@@ -14,8 +11,8 @@ impl CsvImporter {
     }
 }
 
-impl Import<Karte> for CsvImporter {
-    fn import(&mut self) -> Result<Vec<Karte>, Box<dyn Error>> {
+impl CsvImporter {
+    pub fn import(&mut self) -> Result<Vec<Karte>, Box<dyn Error>> {
         let mut reader = csv::Reader::from_path(&self.path)?;
         let cards = reader
             .records()
