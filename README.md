@@ -6,17 +6,14 @@ If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](h
 
 # Todo
 
-- define export names in Deck
-  - fix output cli
 - use builder pattern for Deck
+  - use typestate pattern to differentiate between single back or back sheet (instead of dynamic dispatch)
 - render `%` as _____
- - render *italics*
-- load quips
+  - render *italics*
 - split into two crates
- - remove Importer
+  - remove Importer
 - generate lua
-- use trait for exporter aswell?
 - add renderers for the other platforms `piet_common` supports
 - fix error handling
- - use `color_eyre` for `Box<dyn Error>`
- - get rid of `unwrap`s
+  - use `color_eyre` for `Box<dyn Error>`
+  - get rid of `unwrap`s

@@ -5,7 +5,9 @@ use piet_common::{
     RenderContext,
 };
 
-use crate::{dimensions::Dimensions, renderer::Render, Card as CardTrait, COLUMNS, ROWS};
+use crate::{
+    artifact::Artifact, dimensions::Dimensions, renderer::Render, Card as CardTrait, COLUMNS, ROWS,
+};
 
 pub struct Deck<Card: CardTrait> {
     cards: Vec<Card>,
@@ -25,36 +27,63 @@ impl<Card: CardTrait> Deck<Card> {
     pub fn render<'a, Format: 'a>(
         &'a self,
         renderer: &'a impl Render<Output = Format>,
-    ) -> impl Iterator<Item = Result<Format, Box<dyn Error>>> + '_ {
+    ) -> impl Iterator<Item = Result<Artifact<Format>, Box<dyn Error>>> + '_ {
+        let single_sheet = self.cards.len() <= (ROWS * COLUMNS) as usize;
+
         let front = self
             .cards
             .chunks((ROWS * COLUMNS) as usize)
-            .map(move |chunk| {
-                renderer.create_sheet(|ctx, dimensions| {
-                    Self::render_sheet(ctx, dimensions, chunk, false)
-                })
+            .enumerate()
+            .map(move |(index, chunk)| {
+                renderer
+                    .create_sheet(|ctx, dimensions| {
+                        Self::render_sheet(ctx, dimensions, chunk, false)
+                    })
+                    .map(|image| Artifact {
+                        name: if single_sheet {
+                            self.name.clone()
+                        } else {
+                            format!("{}-{index}", self.name)
+                        },
+                        data: image,
+                    })
             });
 
         let back = if let Some(backside) = &self.backside {
             let back = (0..1).map(move |_| {
-                renderer.create_card(|ctx, dimensions| {
-                    backside.draw_back(ctx, dimensions);
-                    Ok(())
-                })
+                renderer
+                    .create_card(|ctx, dimensions| {
+                        backside.draw_back(ctx, dimensions);
+                        Ok(())
+                    })
+                    .map(|image| Artifact {
+                        name: format!("{}-back-single", self.name),
+                        data: image,
+                    })
             });
 
-            Box::new(back) as Box<dyn Iterator<Item = Result<Format, Box<dyn Error>>>>
+            Box::new(back) as Box<dyn Iterator<Item = Result<Artifact<Format>, Box<dyn Error>>>>
         } else {
             let back = self
                 .cards
                 .chunks((ROWS * COLUMNS) as usize)
-                .map(move |chunk| {
-                    renderer.create_sheet(|ctx, dimensions| {
-                        Self::render_sheet(ctx, dimensions, chunk, true)
-                    })
+                .enumerate()
+                .map(move |(index, chunk)| {
+                    renderer
+                        .create_sheet(|ctx, dimensions| {
+                            Self::render_sheet(ctx, dimensions, chunk, true)
+                        })
+                        .map(|image| Artifact {
+                            name: if single_sheet {
+                                format!("{}-back", self.name)
+                            } else {
+                                format!("{}-back-{index}", self.name)
+                            },
+                            data: image,
+                        })
                 });
 
-            Box::new(back) as Box<dyn Iterator<Item = Result<Format, Box<dyn Error>>>>
+            Box::new(back) as Box<dyn Iterator<Item = Result<Artifact<Format>, Box<dyn Error>>>>
         };
 
         front.chain(back)

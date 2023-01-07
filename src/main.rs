@@ -1,19 +1,22 @@
-use karte::Karte;
 use clap::Parser;
+use karte::Karte;
 use karten::{
-    deck::Deck, dimensions::Dimensions, export::export, renderer::ImageRenderer, Import,
-    BASE_ASPECT_RATIO, BASE_RESOLUTION,
+    deck::Deck,
+    dimensions::Dimensions,
+    export::{Export, PNGExporter},
+    renderer::ImageRenderer,
+    Import, BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
-use std::{error::Error, fs::File, path::PathBuf};
+use std::{error::Error, path::PathBuf};
 
-mod karte;
 mod import_csv;
+mod karte;
 use import_csv::CsvImporter;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
-    #[arg(short, long, default_value = "export/FFFF")]
+    #[arg(short, long, default_value = "export/")]
     output: PathBuf,
 
     /// The aspect ratio of a single card. Defaults to 5w/7.2h.
@@ -29,21 +32,26 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args = Args::parse();
+    let mut args = Args::parse();
+    args.output.push("nofile");
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
-    let cards = CsvImporter::new("prompts.csv").import()?;
-    let deck = Deck::new(cards, Some(Karte::default()), "deck".to_string());
-
+    let prompts = CsvImporter::new("prompts.csv").import()?;
+    let prompts = Deck::new(prompts, Some(Karte::default()), "prompts".to_string());
+    let quips = CsvImporter::new("quips.csv").import()?;
+    let quips = Deck::new(quips, Some(Karte::default()), "quips".to_string());
     let renderer = ImageRenderer::new(dimensions);
 
-    for (index, sheet) in deck.render(&renderer).filter_map(Result::ok).enumerate() {
-        let writer = File::create(
-            args.output
-                .with_file_name(format!("{}-{index}.png", deck.name)),
-        )?;
-        export(&sheet, writer)?;
+    let mut exporter = PNGExporter {
+        directory: args.output,
+    };
+    for artifact in prompts
+        .render(&renderer)
+        .chain(quips.render(&renderer))
+        .filter_map(Result::ok)
+    {
+        exporter.export(artifact)?;
     }
 
     Ok(())
