@@ -5,15 +5,15 @@ use piet_common::{
     RenderContext,
 };
 
-use crate::{dimensions::Dimensions, renderer::Render, DrawableCard, COLUMNS, ROWS};
+use crate::{dimensions::Dimensions, renderer::Render, Card as CardTrait, COLUMNS, ROWS};
 
-pub struct Deck<Card: DrawableCard> {
+pub struct Deck<Card: CardTrait> {
     cards: Vec<Card>,
     backside: Option<Card>,
     pub name: String,
 }
 
-impl<Card: DrawableCard> Deck<Card> {
+impl<Card: CardTrait> Deck<Card> {
     pub fn new(cards: Vec<Card>, backside: Option<Card>, name: String) -> Self {
         Self {
             cards,
@@ -22,10 +22,10 @@ impl<Card: DrawableCard> Deck<Card> {
         }
     }
 
-    pub fn render<'a, T: 'a>(
+    pub fn render<'a, Format: 'a>(
         &'a self,
-        renderer: &'a impl Render<Output = T>,
-    ) -> impl Iterator<Item = Result<T, Box<dyn Error>>> + '_ {
+        renderer: &'a impl Render<Output = Format>,
+    ) -> impl Iterator<Item = Result<Format, Box<dyn Error>>> + '_ {
         let front = self
             .cards
             .chunks((ROWS * COLUMNS) as usize)
@@ -43,7 +43,7 @@ impl<Card: DrawableCard> Deck<Card> {
                 })
             });
 
-            Box::new(back) as Box<dyn Iterator<Item = Result<T, Box<dyn Error>>>>
+            Box::new(back) as Box<dyn Iterator<Item = Result<Format, Box<dyn Error>>>>
         } else {
             let back = self
                 .cards
@@ -54,7 +54,7 @@ impl<Card: DrawableCard> Deck<Card> {
                     })
                 });
 
-            Box::new(back) as Box<dyn Iterator<Item = Result<T, Box<dyn Error>>>>
+            Box::new(back) as Box<dyn Iterator<Item = Result<Format, Box<dyn Error>>>>
         };
 
         front.chain(back)

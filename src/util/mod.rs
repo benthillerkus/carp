@@ -14,7 +14,7 @@ pub const BASE_ASPECT_RATIO: f64 = 5. / 7.2;
 pub const ROWS: u32 = 7;
 pub const COLUMNS: u32 = 10;
 
-pub trait DrawableCard {
+pub trait Card {
     fn index(&self) -> u32;
 
     fn draw(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions);
@@ -22,6 +22,6 @@ pub trait DrawableCard {
     fn draw_back(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions);
 }
 
-pub trait Import<T: DrawableCard> {
+pub trait Import<T: Card> {
     fn import(&mut self) -> Result<Vec<T>, Box<dyn Error>>;
 }

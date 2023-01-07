@@ -2,7 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 use karten::Import;
 
-use crate::card::Card;
+use crate::karte::Karte;
 
 pub struct CsvImporter {
     pub path: PathBuf,
@@ -14,14 +14,14 @@ impl CsvImporter {
     }
 }
 
-impl Import<Card> for CsvImporter {
-    fn import(&mut self) -> Result<Vec<Card>, Box<dyn Error>> {
+impl Import<Karte> for CsvImporter {
+    fn import(&mut self) -> Result<Vec<Karte>, Box<dyn Error>> {
         let mut reader = csv::Reader::from_path(&self.path)?;
         let cards = reader
             .records()
             .filter_map(|r| r.ok())
             .enumerate()
-            .map(|(index, r)| Card {
+            .map(|(index, r)| Karte {
                 index: index as u32,
                 text: r
                     .get(0)

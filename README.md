@@ -9,11 +9,14 @@ If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](h
 - define export names in Deck
   - fix output cli
 - use builder pattern for Deck
-- render % as ______
- - render italics
+- render `%` as _____
+ - render *italics*
 - load quips
 - split into two crates
  - remove Importer
 - generate lua
 - use trait for exporter aswell?
-- define renderer for other platforms
+- add renderers for the other platforms `piet_common` supports
+- fix error handling
+ - use `color_eyre` for `Box<dyn Error>`
+ - get rid of `unwrap`s

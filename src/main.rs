@@ -1,4 +1,4 @@
-use card::Card;
+use karte::Karte;
 use clap::Parser;
 use karten::{
     deck::Deck, dimensions::Dimensions, export::export, renderer::ImageRenderer, Import,
@@ -6,7 +6,7 @@ use karten::{
 };
 use std::{error::Error, fs::File, path::PathBuf};
 
-mod card;
+mod karte;
 mod import_csv;
 use import_csv::CsvImporter;
 
@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
     let cards = CsvImporter::new("prompts.csv").import()?;
-    let deck = Deck::new(cards, Some(Card::default()), "deck".to_string());
+    let deck = Deck::new(cards, Some(Karte::default()), "deck".to_string());
 
     let renderer = ImageRenderer::new(dimensions);
 

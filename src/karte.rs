@@ -1,13 +1,13 @@
-use karten::{dimensions::Dimensions, DrawableCard};
+use karten::{dimensions::Dimensions, Card};
 use piet_common::{kurbo::Point, *};
 
 #[derive(Default)]
-pub struct Card {
+pub struct Karte {
     pub index: u32,
     pub text: String,
 }
 
-impl DrawableCard for Card {
+impl Card for Karte {
     fn index(&self) -> u32 {
         self.index
     }
