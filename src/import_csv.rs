@@ -1,20 +1,22 @@
-use std::error::Error;
+use std::{error::Error, path::PathBuf};
 
 use karten::Import;
 
 use crate::card::Card;
 
-pub struct Importer {}
+pub struct CsvImporter {
+    pub path: PathBuf,
+}
 
-impl Importer {
-    pub fn new() -> Self {
-        Self {}
+impl CsvImporter {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
     }
 }
 
-impl Import<Card> for Importer {
+impl Import<Card> for CsvImporter {
     fn import(&mut self) -> Result<Vec<Card>, Box<dyn Error>> {
-        let mut reader = csv::Reader::from_path("prompts.csv")?;
+        let mut reader = csv::Reader::from_path(&self.path)?;
         let cards = reader
             .records()
             .filter_map(|r| r.ok())

@@ -7,8 +7,8 @@ use karten::{
 use std::{error::Error, fs::File, path::PathBuf};
 
 mod card;
-mod import;
-use import::Importer;
+mod import_csv;
+use import_csv::CsvImporter;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
-    let cards = Importer::new().import()?;
+    let cards = CsvImporter::new("prompts.csv").import()?;
     let deck = Deck::new(dimensions, cards, Some(Card::default()), "deck".to_string());
 
     let pool = Pool::new();
