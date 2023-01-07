@@ -1,19 +1,11 @@
 use std::error::Error;
 
-use karten::DrawableCard;
 use piet_common::{
     kurbo::{Affine, Rect, RoundedRect},
     ImageBuf, RenderContext,
 };
 
-use crate::device::Pool;
-
-use self::dimensions::Dimensions;
-
-pub mod dimensions;
-
-const ROWS: u32 = 7;
-const COLUMNS: u32 = 10;
+use crate::{device::Pool, dimensions::Dimensions, DrawableCard, COLUMNS, ROWS};
 
 pub struct Deck<Card: DrawableCard> {
     cards: Vec<Card>,

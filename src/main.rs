@@ -1,20 +1,14 @@
 use card::Card;
 use clap::Parser;
-use karten::Import;
+use karten::{
+    deck::Deck, device::Pool, dimensions::Dimensions, export::export, Import, BASE_ASPECT_RATIO,
+    BASE_RESOLUTION,
+};
 use std::{error::Error, fs::File, path::PathBuf};
 
-const BASE_RESOLUTION: u32 = 4096;
-const BASE_ASPECT_RATIO: f64 = 5. / 7.2;
-
 mod card;
-mod export;
-use export::export;
 mod import;
 use import::Importer;
-mod deck;
-use deck::dimensions::Dimensions;
-mod device;
-use device::Pool;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -40,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
     let cards = Importer::new().import()?;
-    let deck = deck::Deck::new(dimensions, cards, Some(Card::default()), "deck".to_string());
+    let deck = Deck::new(dimensions, cards, Some(Card::default()), "deck".to_string());
 
     let pool = Pool::new();
 

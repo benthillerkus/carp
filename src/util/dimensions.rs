@@ -2,9 +2,7 @@ use std::error::Error;
 
 use piet_common::{kurbo::Size, BitmapTarget, Device};
 
-use crate::{BASE_ASPECT_RATIO, BASE_RESOLUTION};
-
-use super::{COLUMNS, ROWS};
+use crate::{BASE_ASPECT_RATIO, BASE_RESOLUTION, COLUMNS, ROWS};
 
 #[derive(Clone, Copy)]
 pub struct Dimensions {

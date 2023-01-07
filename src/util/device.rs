@@ -11,6 +11,12 @@ pub struct Pool {
     devices: Arc<AppendOnlyVec<Mutex<Device>>>,
 }
 
+impl Default for Pool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Pool {
     pub fn new() -> Self {
         let v = AppendOnlyVec::new();

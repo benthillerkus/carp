@@ -1,6 +1,14 @@
 use piet_common::{kurbo::RoundedRect, RenderContext};
 use std::error::Error;
 
+pub mod util;
+pub use util::*;
+
+pub const BASE_RESOLUTION: u32 = 4096;
+pub const BASE_ASPECT_RATIO: f64 = 5. / 7.2;
+pub const ROWS: u32 = 7;
+pub const COLUMNS: u32 = 10;
+
 pub trait DrawableCard {
     fn index(&self) -> u32;
 
