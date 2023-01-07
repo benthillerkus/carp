@@ -24,8 +24,11 @@ impl Pool {
             Ok(device)
         } else {
             let index = self.devices.push(Mutex::new(Device::new()?));
-            let device = self.devices[index].lock().unwrap();
-            Ok(device)
+            match self.devices[index].try_lock() {
+                Ok(device) => Ok(device),
+                Err(std::sync::TryLockError::WouldBlock) => self.get(),
+                Err(e) => Err(e).unwrap(),
+            }
         }
     }
 }
