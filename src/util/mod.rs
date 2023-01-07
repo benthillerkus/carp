@@ -5,6 +5,7 @@ pub mod deck;
 pub mod device;
 pub mod dimensions;
 pub mod export;
+pub mod renderer;
 
 pub const BASE_RESOLUTION: u32 = 4096;
 pub const BASE_ASPECT_RATIO: f64 = 5. / 7.2;

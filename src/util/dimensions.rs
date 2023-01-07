@@ -1,6 +1,4 @@
-use std::error::Error;
-
-use piet_common::{kurbo::Size, BitmapTarget, Device};
+use piet_common::kurbo::Size;
 
 use crate::{BASE_ASPECT_RATIO, BASE_RESOLUTION, COLUMNS, ROWS};
 
@@ -52,23 +50,5 @@ impl Dimensions {
             card: Size::new(card_width, card_height),
             pix_scale,
         }
-    }
-
-    pub fn create_sheet<'a>(
-        &'a self,
-        device: &'a mut Device,
-    ) -> Result<BitmapTarget, Box<dyn Error>> {
-        Ok(device.bitmap_target(self.width as usize, self.height as usize, self.pix_scale)?)
-    }
-
-    pub fn create_card<'a>(
-        &'a self,
-        device: &'a mut Device,
-    ) -> Result<BitmapTarget, Box<dyn Error>> {
-        Ok(device.bitmap_target(
-            self.card.width as usize,
-            self.card.height as usize,
-            self.pix_scale,
-        )?)
     }
 }

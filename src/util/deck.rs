@@ -2,10 +2,10 @@ use std::error::Error;
 
 use piet_common::{
     kurbo::{Affine, Rect, RoundedRect},
-    ImageBuf, RenderContext,
+    RenderContext,
 };
 
-use crate::{device::Pool, dimensions::Dimensions, DrawableCard, COLUMNS, ROWS};
+use crate::{dimensions::Dimensions, renderer::Render, DrawableCard, COLUMNS, ROWS};
 
 pub struct Deck<Card: DrawableCard> {
     cards: Vec<Card>,
@@ -29,40 +29,35 @@ impl<Card: DrawableCard> Deck<Card> {
         }
     }
 
-    pub fn render(
-        &self,
-        pool: Pool,
-    ) -> impl Iterator<Item = Result<ImageBuf, Box<dyn Error>>> + '_ {
-        let pool_front = pool.clone();
-        let pool_back = pool.clone();
-
+    pub fn render<'a, T: 'a>(
+        &'a self,
+        renderer: &'a impl Render<Output = T>,
+    ) -> impl Iterator<Item = Result<T, Box<dyn Error>>> + '_ {
         let front = self
             .cards
             .chunks((ROWS * COLUMNS) as usize)
-            .map(move |chunk| self.render_sheet(pool_front.clone(), chunk, false));
+            .map(move |chunk| {
+                renderer.create_sheet(|ctx, dimensions| self.render_sheet(ctx, chunk, false))
+            });
 
         let back = if let Some(backside) = &self.backside {
             let back = (0..1).map(move |_| {
-                let mut device = pool.get().unwrap();
-                let mut bitmap = self.dimensions.create_card(&mut device).unwrap();
-                let mut ctx = bitmap.render_context();
-                backside.draw_back(
-                    &mut ctx,
-                    &self.dimensions.card.to_rect().to_rounded_rect(20.),
-                );
-                ctx.finish()?;
-                drop(ctx);
-                Ok(bitmap.to_image_buf(piet_common::ImageFormat::RgbaPremul)?)
+                renderer.create_card(|ctx, dimensions| {
+                    backside.draw_back(ctx, &self.dimensions.card.to_rect().to_rounded_rect(20.));
+                    Ok(())
+                })
             });
 
-            Box::new(back) as Box<dyn Iterator<Item = Result<ImageBuf, Box<dyn Error>>>>
+            Box::new(back) as Box<dyn Iterator<Item = Result<T, Box<dyn Error>>>>
         } else {
             let back = self
                 .cards
                 .chunks((ROWS * COLUMNS) as usize)
-                .map(move |chunk| self.render_sheet(pool_back.clone(), chunk, true));
+                .map(move |chunk| {
+                    renderer.create_sheet(|ctx, dimensions| self.render_sheet(ctx, chunk, true))
+                });
 
-            Box::new(back) as Box<dyn Iterator<Item = Result<ImageBuf, Box<dyn Error>>>>
+            Box::new(back) as Box<dyn Iterator<Item = Result<T, Box<dyn Error>>>>
         };
 
         front.chain(back)
@@ -70,14 +65,10 @@ impl<Card: DrawableCard> Deck<Card> {
 
     fn render_sheet<'a>(
         &'a self,
-        pool: Pool,
+        ctx: &mut impl RenderContext,
         cards: &'a [Card],
         draw_back: bool,
-    ) -> Result<ImageBuf, Box<dyn Error>> {
-        let mut device = pool.get()?;
-        let mut bitmap = self.dimensions.create_sheet(&mut device)?;
-        let mut ctx = bitmap.render_context();
-
+    ) -> Result<(), Box<dyn Error>> {
         let card_area = Rect::from_origin_size((0., 0.), self.dimensions.card);
         let border = RoundedRect::from_rect(card_area, 20.);
         for card in cards {
@@ -95,9 +86,6 @@ impl<Card: DrawableCard> Deck<Card> {
                 Ok(())
             })?;
         }
-
-        ctx.finish()?;
-        drop(ctx);
-        Ok(bitmap.to_image_buf(piet_common::ImageFormat::RgbaPremul)?)
+        Ok(())
     }
 }

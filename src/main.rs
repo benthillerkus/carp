@@ -1,8 +1,8 @@
 use card::Card;
 use clap::Parser;
 use karten::{
-    deck::Deck, device::Pool, dimensions::Dimensions, export::export, Import, BASE_ASPECT_RATIO,
-    BASE_RESOLUTION,
+    deck::Deck, dimensions::Dimensions, export::export, renderer::ImageRenderer,
+    Import, BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
 use std::{error::Error, fs::File, path::PathBuf};
 
@@ -36,9 +36,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let cards = CsvImporter::new("prompts.csv").import()?;
     let deck = Deck::new(dimensions, cards, Some(Card::default()), "deck".to_string());
 
-    let pool = Pool::new();
+    let renderer = ImageRenderer::new(dimensions);
 
-    for (index, sheet) in deck.render(pool).filter_map(Result::ok).enumerate() {
+    for (index, sheet) in deck.render(&renderer).filter_map(Result::ok).enumerate() {
         let writer = File::create(
             args.output
                 .with_file_name(format!("{}-{index}.png", deck.name)),
