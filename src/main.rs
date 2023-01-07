@@ -38,16 +38,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
-    let prompts = import("prompts.csv")?
+    let prompts: Vec<_> = import("prompts.csv")?
         .iter()
         .enumerate()
         .map(|(index, text)| Karte {
             index: index as u32,
             text: text.to_owned(),
-            alternate_style: false,
+            alternate_style: true,
         })
         .collect();
-    let prompts = Deck::new(prompts, Some(Karte::default()), "prompts".to_string());
+    let back = prompts.first().cloned();
+    let prompts = Deck::new(prompts, back, "prompts".to_string());
     let quips = import("quips.csv")?
         .iter()
         .enumerate()

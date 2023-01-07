@@ -41,9 +41,9 @@ impl<Card: CardTrait> Deck<Card> {
                     })
                     .map(|image| Artifact {
                         name: if single_sheet {
-                            self.name.clone()
+                            format!("{}-contains-{}", self.name, chunk.len())
                         } else {
-                            format!("{}-{index}", self.name)
+                            format!("{}-contains-{}-page-{index}", self.name, chunk.len())
                         },
                         data: image,
                     })
@@ -75,9 +75,9 @@ impl<Card: CardTrait> Deck<Card> {
                         })
                         .map(|image| Artifact {
                             name: if single_sheet {
-                                format!("{}-back", self.name)
+                                format!("{}-back-contains-{}", self.name, chunk.len())
                             } else {
-                                format!("{}-back-{index}", self.name)
+                                format!("{}-back-contains-{}-page-{index}", self.name, chunk.len())
                             },
                             data: image,
                         })
