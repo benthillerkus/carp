@@ -9,20 +9,13 @@ use crate::{dimensions::Dimensions, renderer::Render, DrawableCard, COLUMNS, ROW
 
 pub struct Deck<Card: DrawableCard> {
     cards: Vec<Card>,
-    dimensions: Dimensions,
     backside: Option<Card>,
     pub name: String,
 }
 
 impl<Card: DrawableCard> Deck<Card> {
-    pub fn new(
-        dimensions: Dimensions,
-        cards: Vec<Card>,
-        backside: Option<Card>,
-        name: String,
-    ) -> Self {
+    pub fn new(cards: Vec<Card>, backside: Option<Card>, name: String) -> Self {
         Self {
-            dimensions,
             cards,
             backside,
             name,
@@ -37,13 +30,15 @@ impl<Card: DrawableCard> Deck<Card> {
             .cards
             .chunks((ROWS * COLUMNS) as usize)
             .map(move |chunk| {
-                renderer.create_sheet(|ctx, dimensions| self.render_sheet(ctx, chunk, false))
+                renderer.create_sheet(|ctx, dimensions| {
+                    Self::render_sheet(ctx, &dimensions, chunk, false)
+                })
             });
 
         let back = if let Some(backside) = &self.backside {
             let back = (0..1).map(move |_| {
                 renderer.create_card(|ctx, dimensions| {
-                    backside.draw_back(ctx, &self.dimensions.card.to_rect().to_rounded_rect(20.));
+                    backside.draw_back(ctx, &dimensions.card.to_rect().to_rounded_rect(20.));
                     Ok(())
                 })
             });
@@ -54,7 +49,9 @@ impl<Card: DrawableCard> Deck<Card> {
                 .cards
                 .chunks((ROWS * COLUMNS) as usize)
                 .map(move |chunk| {
-                    renderer.create_sheet(|ctx, dimensions| self.render_sheet(ctx, chunk, true))
+                    renderer.create_sheet(|ctx, dimensions| {
+                        Self::render_sheet(ctx, &dimensions, chunk, true)
+                    })
                 });
 
             Box::new(back) as Box<dyn Iterator<Item = Result<T, Box<dyn Error>>>>
@@ -63,19 +60,19 @@ impl<Card: DrawableCard> Deck<Card> {
         front.chain(back)
     }
 
-    fn render_sheet<'a>(
-        &'a self,
+    fn render_sheet(
         ctx: &mut impl RenderContext,
-        cards: &'a [Card],
+        dimensions: &Dimensions,
+        cards: &[Card],
         draw_back: bool,
     ) -> Result<(), Box<dyn Error>> {
-        let card_area = Rect::from_origin_size((0., 0.), self.dimensions.card);
+        let card_area = Rect::from_origin_size((0., 0.), dimensions.card);
         let border = RoundedRect::from_rect(card_area, 20.);
         for card in cards {
             ctx.with_save(|ctx| {
                 ctx.transform(Affine::translate((
-                    (card.index() % COLUMNS) as f64 * self.dimensions.card.width,
-                    (card.index() / COLUMNS) as f64 * self.dimensions.card.height,
+                    (card.index() % COLUMNS) as f64 * dimensions.card.width,
+                    (card.index() / COLUMNS) as f64 * dimensions.card.height,
                 )));
                 ctx.clip(border);
                 if draw_back {

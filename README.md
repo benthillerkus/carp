@@ -16,7 +16,3 @@ If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](h
  - remove Importer
 - generate lua
 - use trait for exporter aswell?
-- clean up Deck
-  - remove dimensions from Deck
-   - maybe move into a seperate rendering related module?
-- remove create_sheet and create_card from dimensions
