@@ -1,7 +1,6 @@
 use std::{
-    cell::{RefCell, RefMut},
     error::Error,
-    sync::Arc,
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 use append_only_vec::AppendOnlyVec;
@@ -9,7 +8,7 @@ use piet_common::Device;
 
 #[derive(Clone)]
 pub struct Pool {
-    devices: Arc<AppendOnlyVec<RefCell<Device>>>,
+    devices: Arc<AppendOnlyVec<Mutex<Device>>>,
 }
 
 impl Pool {
@@ -20,12 +19,12 @@ impl Pool {
         }
     }
 
-    pub fn get(&self) -> Result<RefMut<Device>, Box<dyn Error>> {
-        if let Some(device) = self.devices.iter().find_map(|d| d.try_borrow_mut().ok()) {
+    pub fn get(&self) -> Result<MutexGuard<Device>, Box<dyn Error>> {
+        if let Some(device) = self.devices.iter().find_map(|d| d.try_lock().ok()) {
             Ok(device)
         } else {
-            let index = self.devices.push(RefCell::new(Device::new()?));
-            let device = self.devices[index].borrow_mut();
+            let index = self.devices.push(Mutex::new(Device::new()?));
+            let device = self.devices[index].lock().unwrap();
             Ok(device)
         }
     }
