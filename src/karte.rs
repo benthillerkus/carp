@@ -15,6 +15,7 @@ pub mod theme {
     #[derive(Clone)]
     pub struct Theme {
         pub font: FontFamily,
+        pub text_size: f64,
         pub color: Color,
         pub background: Color,
         pub border_size: f64,
@@ -31,6 +32,7 @@ pub mod theme {
                     .text()
                     .font_family("Comic Sans MS")
                     .unwrap_or(FontFamily::MONOSPACE),
+                text_size: 38.0,
                 color: Color::BLACK,
                 background: Color::WHITE,
                 border_size: 16.0,
@@ -65,7 +67,7 @@ impl Card for Karte {
     }
 
     fn draw(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions) {
-        let border = Point::new(64.0, 64.0);
+        let border = Point::new(56.0, 64.0);
         let area = dimensions.card.to_rounded_rect(20.);
         let theme = self.theme(ctx);
 
@@ -73,7 +75,7 @@ impl Card for Karte {
         let text = ctx
             .text()
             .new_text_layout(self.text.clone())
-            .font(theme.font.to_owned(), 42.)
+            .font(theme.font.to_owned(), theme.text_size)
             .alignment(TextAlignment::Start)
             .text_color(theme.color)
             .max_width(area.width() - border.x * 2.0)
