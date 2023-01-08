@@ -12,6 +12,7 @@ pub struct Karte {
 pub mod theme {
     use super::*;
 
+    #[derive(Clone)]
     pub struct Theme {
         pub font: FontFamily,
         pub color: Color,
@@ -28,7 +29,7 @@ pub mod theme {
             LIGHT_THEME.get_or_init(|| Theme {
                 font: ctx
                     .text()
-                    .font_family("Bebas Neue")
+                    .font_family("Comic Sans MS")
                     .unwrap_or(FontFamily::MONOSPACE),
                 color: Color::BLACK,
                 background: Color::WHITE,
@@ -39,14 +40,10 @@ pub mod theme {
 
         fn dark(ctx: &mut impl RenderContext) -> &'static Theme {
             DARK_THEME.get_or_init(|| Theme {
-                font: ctx
-                    .text()
-                    .font_family("Bebas Neue")
-                    .unwrap_or(FontFamily::MONOSPACE),
                 color: Color::WHITE,
                 background: Color::BLACK,
-                border_size: 16.0,
                 border_color: Color::grey(0.1),
+                ..Theme::light(ctx).clone()
             })
         }
     }
