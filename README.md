@@ -2,7 +2,7 @@
 
 This is a template project for generating decks for the [Tabletop Simulator](https://tabletopsimulator.com) from structured data.
 
-If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](https://github.com/eldstal/cardcinogen) or perhaps [decker](https://splizard.com/magic/decker)
+If you're looking for a more fleshed-out tool, check out [eldstal/cardcinogen](https://github.com/eldstal/cardcinogen) or perhaps [decker](https://splizard.com/magic/decker)
 
 # Todo
 
@@ -17,3 +17,9 @@ If you're looking for a more fleshed out tool, check out [eldstal/cardcinogen](h
 - fix error handling
   - use `color_eyre` for `Box<dyn Error>`
   - get rid of `unwrap`s
+- index in Card trait? remove, replace with index from enumeration
+- move file name generation from metadata into Artifact
+- move file creation out of exporter
+- overwrite directory
+- remove tabletop simulator assumptions from render sheets
+  - maybe make dimensions more powerful?
