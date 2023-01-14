@@ -6,7 +6,14 @@ impl<'a> TryFrom<&'a str> for Deck<'a> {
     type Error = Error;
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
-        Document::parse(input)?.try_into()
+        Document::parse_with_options(
+            input,
+            roxmltree::ParsingOptions {
+                allow_dtd: true,
+                nodes_limit: u32::MAX,
+            },
+        )?
+        .try_into()
     }
 }
 
