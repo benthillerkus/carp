@@ -3,7 +3,7 @@ pub struct Artifact<Format> {
     pub data: Format,
 }
 
-use crate::{Error, Result};
+use crate::Result;
 
 type ArtifactIterator<'a, Format> = Box<dyn Iterator<Item = Result<Artifact<Format>>> + 'a>;
 

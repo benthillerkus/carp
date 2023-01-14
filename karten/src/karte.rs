@@ -1,6 +1,5 @@
 use carp::{dimensions::Dimensions, Card as CardTrait};
 use piet_common::{kurbo::Point, *};
-use std::borrow::Cow;
 
 use crate::{
     format::{self, Card, Deck},

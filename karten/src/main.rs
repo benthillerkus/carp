@@ -1,4 +1,3 @@
-use clap::Parser;
 use carp::{
     dimensions::Dimensions,
     export::{Export, PNGExporter},
@@ -6,14 +5,12 @@ use carp::{
     tts::TTS,
     BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
-use std::fs::{self, File};
-use std::{
-    error::Error,
-    path::{Path, PathBuf},
-};
+use clap::Parser;
+use std::fs::{self};
+use std::{error::Error, path::PathBuf};
 
-mod format;
 mod deck;
+mod format;
 mod karte;
 mod theme;
 
