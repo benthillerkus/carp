@@ -21,7 +21,7 @@ impl Theme {
                 .text()
                 .font_family("Comic Sans MS")
                 .unwrap_or(FontFamily::MONOSPACE),
-            text_size: 36.0,
+            text_size: 38.0,
             color: Color::BLACK,
             background: Color::WHITE,
             border_size: 16.0,
