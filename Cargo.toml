@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "karten",
+  "carp"
 ]
 
 [workspace.package]

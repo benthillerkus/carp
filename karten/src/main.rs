@@ -1,18 +1,21 @@
 use clap::Parser;
-use karte::Karte;
-use karten::{
-    deck::Deck,
+use carp::{
     dimensions::Dimensions,
     export::{Export, PNGExporter},
     renderer::ImageRenderer,
+    tts::TTS,
     BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
+use std::fs::{self, File};
 use std::{
     error::Error,
     path::{Path, PathBuf},
 };
 
+mod format;
+mod deck;
 mod karte;
+mod theme;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -38,53 +41,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
-    let prompts: Vec<_> = import("prompts.csv")?
-        .iter()
-        .enumerate()
-        .map(|(index, text)| Karte {
-            index: index as u32,
-            text: text.to_owned(),
-            alternate_style: true,
-        })
-        .collect();
-    let back = prompts.first().cloned();
-    let prompts = Deck::new(prompts, back, "prompts".to_string());
-    let quips = import("quips.csv")?
-        .iter()
-        .enumerate()
-        .map(|(index, text)| Karte {
-            index: index as u32,
-            text: text.to_owned(),
-            alternate_style: false,
-        })
-        .collect();
-    let quips = Deck::new(quips, Some(Karte::default()), "quips".to_string());
+    let prompts = fs::read_to_string("prompts.xml")?;
+    let prompts = format::Deck::try_from(prompts.as_ref())?;
+    let quips = fs::read_to_string("quips.xml")?;
+    let quips = format::Deck::try_from(quips.as_ref())?;
+
     let renderer = ImageRenderer::new(dimensions);
 
     let mut exporter = PNGExporter {
         directory: args.output,
     };
-    for artifact in prompts
-        .render(&renderer)
-        .chain(quips.render(&renderer))
+
+    for artifact in TTS::build(&prompts, &renderer)
+        .chain(TTS::build(&quips, &renderer))
         .filter_map(Result::ok)
     {
         exporter.export(artifact)?;
     }
 
     Ok(())
-}
-
-pub fn import(path: impl AsRef<Path>) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut reader = csv::Reader::from_path(path)?;
-    let cards = reader
-        .records()
-        .filter_map(|r| r.ok())
-        .map(|r| {
-            r.get(0)
-                .map_or_else(|| String::from("COULDN'T IMPORT"), |s| s.to_owned())
-        })
-        .collect();
-
-    Ok(cards)
 }

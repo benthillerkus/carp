@@ -1,80 +1,34 @@
-use karten::{dimensions::Dimensions, Card};
-use once_cell::sync::OnceCell;
+use carp::{dimensions::Dimensions, Card as CardTrait};
 use piet_common::{kurbo::Point, *};
+use std::borrow::Cow;
 
-#[derive(Default, Clone)]
-pub struct Karte {
-    pub index: u32,
-    pub text: String,
-    pub alternate_style: bool,
-}
+use crate::{
+    format::{self, Card, Deck},
+    theme::Theme,
+};
 
-pub mod theme {
-    use super::*;
+impl<'a> CardTrait for Card<'a> {
+    type Deck = Deck<'a>;
 
-    #[derive(Clone)]
-    pub struct Theme {
-        pub font: FontFamily,
-        pub text_size: f64,
-        pub color: Color,
-        pub background: Color,
-        pub border_size: f64,
-        pub border_color: Color,
-    }
-
-    static LIGHT_THEME: OnceCell<Theme> = OnceCell::new();
-    static DARK_THEME: OnceCell<Theme> = OnceCell::new();
-
-    impl Theme {
-        fn light(ctx: &mut impl RenderContext) -> &'static Theme {
-            LIGHT_THEME.get_or_init(|| Theme {
-                font: ctx
-                    .text()
-                    .font_family("Comic Sans MS")
-                    .unwrap_or(FontFamily::MONOSPACE),
-                text_size: 38.0,
-                color: Color::BLACK,
-                background: Color::WHITE,
-                border_size: 16.0,
-                border_color: Color::grey(0.95),
-            })
-        }
-
-        fn dark(ctx: &mut impl RenderContext) -> &'static Theme {
-            DARK_THEME.get_or_init(|| Theme {
-                color: Color::WHITE,
-                background: Color::BLACK,
-                border_color: Color::grey(0.1),
-                ..Theme::light(ctx).clone()
-            })
-        }
-    }
-
-    impl Karte {
-        pub fn theme(&self, ctx: &mut impl RenderContext) -> &'static Theme {
-            if self.alternate_style {
-                Theme::dark(ctx)
-            } else {
-                Theme::light(ctx)
-            }
-        }
-    }
-}
-
-impl Card for Karte {
-    fn index(&self) -> u32 {
-        self.index
-    }
-
-    fn draw(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions) {
+    fn draw(
+        &self,
+        deck: &Self::Deck,
+        ctx: &mut impl RenderContext,
+        index: u32,
+        dimensions: &Dimensions,
+    ) {
         let border = Point::new(56.0, 64.0);
         let area = dimensions.card.to_rounded_rect(20.);
-        let theme = self.theme(ctx);
+        let theme = if deck.theme == format::Theme::Light {
+            Theme::light(ctx)
+        } else {
+            Theme::dark(ctx)
+        };
 
         ctx.fill(area, &theme.background);
         let text = ctx
             .text()
-            .new_text_layout(self.text.clone())
+            .new_text_layout(self.to_string())
             .font(theme.font.to_owned(), theme.text_size)
             .alignment(TextAlignment::Start)
             .text_color(theme.color)
@@ -86,7 +40,7 @@ impl Card for Karte {
 
         let number = ctx
             .text()
-            .new_text_layout(format!("{}", self.index + 1))
+            .new_text_layout(format!("{}", index + 1))
             .font(theme.font.to_owned(), 24.)
             .alignment(TextAlignment::Center)
             .text_color(Color::BLACK)
@@ -102,9 +56,19 @@ impl Card for Karte {
         ctx.stroke(area, &theme.border_color, theme.border_size);
     }
 
-    fn draw_back(&self, ctx: &mut impl RenderContext, dimensions: &Dimensions) {
+    fn draw_back(
+        &self,
+        deck: &Self::Deck,
+        ctx: &mut impl RenderContext,
+        _index: u32,
+        dimensions: &Dimensions,
+    ) {
         let area = dimensions.card.to_rounded_rect(20.);
-        let theme = self.theme(ctx);
+        let theme = if deck.theme == format::Theme::Light {
+            Theme::light(ctx)
+        } else {
+            Theme::dark(ctx)
+        };
 
         let text = ctx
             .text()

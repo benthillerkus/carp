@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deck name="My Name">
+  <card>The first card contains a <blank />.</card>
+  <card><italic><blank/></italic></card>
+  <card>This is <italic>very</italic> good.</card>
+</deck>
