@@ -1,7 +1,6 @@
+use super::{error::Error, *};
 use roxmltree::{Document, Node};
-use std::borrow::Cow;
-
-use super::{error::Error, Back, Card, Deck, Markup, Theme};
+use std::{borrow::Cow, collections::VecDeque};
 
 impl<'a> TryFrom<&'a str> for Deck<'a> {
     type Error = Error;
@@ -81,7 +80,51 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
             })
         } else {
             Ok(Self {
-                content: node.children().map(Markup::from).collect(),
+                content: {
+                    let mut content: VecDeque<Markup> = node.children().map(Markup::from).collect();
+
+                    // Remove leading and trailing blank lines at the start and end of a card
+                    if let Some(mut first) = content.pop_front() {
+                        match first {
+                            Markup::Plain(Cow::Borrowed(ref mut b)) => {
+                                *b = b.trim_start();
+                                if b.is_empty() {
+                                    content.push_front(first)
+                                }
+                            }
+                            Markup::Plain(Cow::Owned(ref mut s)) => {
+                                let initial = s.len();
+                                if initial > 0 {
+                                    s.drain(0..(initial - s.trim_start().len()));
+                                    content.push_front(first)
+                                }
+                            }
+                            _ => content.push_front(first),
+                        }
+                    }
+                    if let Some(mut first) = content.pop_back() {
+                        match first {
+                            Markup::Plain(Cow::Borrowed(ref mut b)) => {
+                                *b = b.trim_end();
+                                if b.is_empty() {
+                                    content.push_back(first)
+                                }
+                            }
+                            Markup::Plain(Cow::Owned(ref mut s)) => {
+                                let initial = s.len();
+                                if initial > 0 {
+                                    for _ in 0..(initial - s.trim_end().len()) {
+                                        s.pop();
+                                    }
+                                    content.push_back(first)
+                                }
+                            }
+                            _ => content.push_back(first),
+                        }
+                    }
+
+                    content.into()
+                },
             })
         }
     }
@@ -152,5 +195,15 @@ mod tests {
         );
         assert_eq!(format!("{}", deck.cards[1]), "*____*");
         assert_eq!(format!("{}", deck.cards[2]), "This is *very* good.");
+    }
+
+    #[test]
+    fn trimming() {
+        let deck: Deck = r#"<deck name="hi"><card>
+        Hallo!!!!!<blank/> </card></deck>"#
+            .try_into()
+            .unwrap();
+
+        assert_eq!(format!("{}", deck.cards[0]), "Hallo!!!!!____");
     }
 }
