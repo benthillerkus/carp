@@ -1,8 +1,7 @@
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, fmt::Display, ops::Range};
 
-use roxmltree::{Document, Node};
 mod error;
-use error::Error;
+mod xml;
 
 #[derive(Debug, PartialEq)]
 pub struct Deck<'a> {
@@ -26,70 +25,11 @@ pub enum Back {
     Individual,
 }
 
-impl std::error::Error for Error {}
-
-impl<'a> TryFrom<&'a str> for Deck<'a> {
-    type Error = Error;
-
-    fn try_from(input: &'a str) -> Result<Self, Self::Error> {
-        Document::parse(input)?.try_into()
-    }
-}
-
-impl<'a> TryFrom<Document<'a>> for Deck<'a> {
-    type Error = Error;
-
-    fn try_from(document: Document<'a>) -> Result<Self, Self::Error> {
-        document.root_element().try_into()
-    }
-}
-
-impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
-    type Error = Error;
-
-    fn try_from(node: Node<'a, 'input>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            name: node
-                .attribute("name")
-                .map(|name| Cow::Owned(name.to_owned()))
-                .ok_or(Error::MissingDeckName)?,
-            theme: node
-                .attribute("theme")
-                .map(|s| match s {
-                    "light" | "Light" | "LIGHT" => Theme::Light,
-                    "dark" | "Dark" | "DARK" => Theme::Dark,
-                    _ => Default::default(),
-                })
-                .unwrap_or_default(),
-            back: node
-                .attribute("theme")
-                .map(|s| match s {
-                    "shared" | "Shared" | "SHARED" => Back::Shared,
-                    "individual" | "Individual" | "INDIVIDUAL" => Back::Individual,
-                    _ => Default::default(),
-                })
-                .unwrap_or_default(),
-            cards: {
-                let mut result = Vec::new();
-                let cards = node
-                    .children()
-                    .filter(|child| child.has_tag_name("card"))
-                    .map(Card::try_from);
-                for card in cards {
-                    match card {
-                        Ok(card) => result.push(card),
-                        Err(error) => return Err(error),
-                    }
-                }
-                result
-            },
-        })
-    }
-}
+pub type Content<'a> = Vec<Markup<'a>>;
 
 #[derive(Debug, PartialEq)]
 pub struct Card<'a> {
-    pub content: Vec<Markup<'a>>,
+    pub content: Content<'a>,
 }
 
 impl Display for Card<'_> {
@@ -101,35 +41,20 @@ impl Display for Card<'_> {
     }
 }
 
-impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
-    type Error = Error;
-
-    fn try_from(node: Node<'_, 'a>) -> Result<Self, Self::Error> {
-        if !node.has_tag_name("card") {
-            Err(Error::UnexpectedTag {
-                expected: "card",
-                actual: node.tag_name().name().to_owned(),
-            })
-        } else {
-            Ok(Self {
-                content: node.children().map(Markup::from).collect(),
-            })
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum Markup<'a> {
     Plain(Cow<'a, str>),
     Blank,
-    Italic(Vec<Markup<'a>>),
+    Italic(Content<'a>),
     Unknown {
         tag: Cow<'a, str>,
-        content: Vec<Markup<'a>>,
+        content: Content<'a>,
     },
 }
 
 impl Display for Markup<'_> {
+    /// This will render the card with human readable markup.
+    /// This is not meant to be parsed back into a card.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Markup::Plain(text) => write!(f, "{}", text),
@@ -152,70 +77,64 @@ impl Display for Markup<'_> {
     }
 }
 
-impl<'a> From<Node<'_, 'a>> for Markup<'a> {
-    fn from(node: Node<'_, 'a>) -> Self {
-        if node.is_text() {
-            return Self::Plain(Cow::Owned(node.text().unwrap_or("").to_owned()));
+impl Card<'_> {
+    /// Returns the content of the card as a string of plain text and a list of style annotations.
+    /// This is useful for rendering the card with a GUI toolkit.
+    pub fn styled_segments(&self) -> (String, Vec<StyleAnnotation>) {
+        let mut render = String::new();
+        let mut annotations = Vec::new();
+
+        fn styled_segments(
+            content: &[Markup<'_>],
+            render: &mut String,
+            annotations: &mut Vec<StyleAnnotation>,
+        ) {
+            content.iter().for_each(|markup| match markup {
+                Markup::Plain(text) => render.push_str(text),
+                Markup::Blank => {
+                    render.push_str("____");
+                }
+                Markup::Italic(content) => {
+                    let start = render.len();
+                    styled_segments(content, render, annotations);
+                    let end = render.len();
+                    annotations.push(StyleAnnotation::Italic(start..end));
+                }
+                Markup::Unknown { tag: _, content } => {
+                    styled_segments(content, render, annotations);
+                }
+            });
         }
-        match node.tag_name().name() {
-            "blank" => Self::Blank,
-            "italic" | "i" => Self::Italic(node.children().map(Markup::from).collect()),
-            unknown => Self::Unknown {
-                tag: Cow::Owned(unknown.to_owned()),
-                content: node.children().map(Markup::from).collect(),
-            },
-        }
+
+        styled_segments(&self.content, &mut render, &mut annotations);
+
+        (render, annotations)
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum StyleAnnotation {
+    Italic(Range<usize>),
+}
+
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
 
-    const TEST_DATA: &str = include_str!("format/sample.xml");
-
     #[test]
-    fn it_works() {
-        let deck: Deck = TEST_DATA.try_into().unwrap();
+    fn styled_segments() {
+        let card = Card {
+            content: vec![
+                Markup::Plain("Hello".into()),
+                Markup::Blank,
+                Markup::Italic(vec![Markup::Plain("World".into())]),
+            ],
+        };
 
-        assert_eq!(
-            deck,
-            Deck {
-                name: "My Name".into(),
-                theme: Default::default(),
-                back: Default::default(),
-                cards: vec![
-                    Card {
-                        content: vec![
-                            Markup::Plain("The first card contains a ".into()),
-                            Markup::Blank,
-                            Markup::Plain(".".into())
-                        ],
-                    },
-                    Card {
-                        content: vec![Markup::Italic(vec![Markup::Blank])]
-                    },
-                    Card {
-                        content: vec![
-                            Markup::Plain("This is ".into()),
-                            Markup::Italic(vec![Markup::Plain("very".into())]),
-                            Markup::Plain(" good.".into()),
-                        ],
-                    },
-                ]
-            }
-        );
-    }
+        let (render, annotations) = card.styled_segments();
 
-    #[test]
-    fn display() {
-        let deck: Deck = TEST_DATA.try_into().unwrap();
-
-        assert_eq!(
-            format!("{}", deck.cards[0]),
-            "The first card contains a ____."
-        );
-        assert_eq!(format!("{}", deck.cards[1]), "*____*");
-        assert_eq!(format!("{}", deck.cards[2]), "This is *very* good.");
+        assert_eq!(render, "Hello____World");
+        assert_eq!(&"Hello____World"[9..14], "World");
+        assert_eq!(annotations, vec![StyleAnnotation::Italic(9..14)]);
     }
 }

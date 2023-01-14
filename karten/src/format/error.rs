@@ -8,6 +8,8 @@ pub enum Error {
     Parse(roxmltree::Error),
 }
 
+impl std::error::Error for Error {}
+
 impl From<roxmltree::Error> for Error {
     fn from(error: roxmltree::Error) -> Self {
         Self::Parse(error)

@@ -2,7 +2,7 @@ use carp::{dimensions::Dimensions, Card as CardTrait};
 use piet_common::{kurbo::Point, *};
 
 use crate::{
-    format::{self, Card, Deck},
+    format::{self, Card, Deck, StyleAnnotation},
     theme::Theme,
 };
 
@@ -25,15 +25,26 @@ impl<'a> CardTrait for Card<'a> {
         };
 
         ctx.fill(area, &theme.background);
-        let text = ctx
+
+        let (text, annotations) = self.styled_segments();
+
+        let mut text = ctx
             .text()
-            .new_text_layout(self.to_string())
+            .new_text_layout(text)
             .font(theme.font.to_owned(), theme.text_size)
             .alignment(TextAlignment::Start)
             .text_color(theme.color)
-            .max_width(area.width() - border.x * 2.0)
-            .build()
-            .unwrap();
+            .max_width(area.width() - border.x * 2.0);
+
+        for annotation in annotations {
+            match annotation {
+                StyleAnnotation::Italic(range) => {
+                    text = text.range_attribute(range, TextAttribute::Style(FontStyle::Italic))
+                }
+            }
+        }
+
+        let text = text.build().unwrap();
 
         ctx.draw_text(&text, border);
 
