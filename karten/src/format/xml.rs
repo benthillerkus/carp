@@ -1,7 +1,7 @@
-use std::borrow::Cow;
 use roxmltree::{Document, Node};
+use std::borrow::Cow;
 
-use super::{Deck, error::Error, Theme, Back, Card, Markup};
+use super::{error::Error, Back, Card, Deck, Markup, Theme};
 
 impl<'a> TryFrom<&'a str> for Deck<'a> {
     type Error = Error;
@@ -30,20 +30,28 @@ impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
                 .ok_or(Error::MissingDeckName)?,
             theme: node
                 .attribute("theme")
-                .map(|s| match s {
-                    "light" | "Light" | "LIGHT" => Theme::Light,
-                    "dark" | "Dark" | "DARK" => Theme::Dark,
-                    _ => Default::default(),
-                })
-                .unwrap_or_default(),
+                .map_or(Ok(Default::default()), |s| match s {
+                    "light" | "Light" | "LIGHT" => Ok(Theme::Light),
+                    "dark" | "Dark" | "DARK" => Ok(Theme::Dark),
+                    value => Err(Error::InvalidAttribueValue {
+                        tag: String::from("deck"),
+                        attribute: "theme",
+                        value: String::from(value),
+                        allowed: &["light", "dark"],
+                    }),
+                })?,
             back: node
-                .attribute("theme")
-                .map(|s| match s {
-                    "shared" | "Shared" | "SHARED" => Back::Shared,
-                    "individual" | "Individual" | "INDIVIDUAL" => Back::Individual,
-                    _ => Default::default(),
-                })
-                .unwrap_or_default(),
+                .attribute("back")
+                .map_or(Ok(Default::default()), |s| match s {
+                    "shared" | "Shared" | "SHARED" => Ok(Back::Shared),
+                    "individual" | "Individual" | "INDIVIDUAL" => Ok(Back::Individual),
+                    value => Err(Error::InvalidAttribueValue {
+                        tag: String::from("deck"),
+                        attribute: "back",
+                        value: String::from(value),
+                        allowed: &["shared", "individual"],
+                    }),
+                })?,
             cards: {
                 let mut result = Vec::new();
                 let cards = node
@@ -109,7 +117,7 @@ mod tests {
             deck,
             Deck {
                 name: "My Name".into(),
-                theme: Default::default(),
+                theme: Theme::Dark,
                 back: Default::default(),
                 cards: vec![
                     Card {

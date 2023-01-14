@@ -5,6 +5,12 @@ pub enum Error {
         expected: &'static str,
         actual: String,
     },
+    InvalidAttribueValue {
+        tag: String,
+        attribute: &'static str,
+        value: String,
+        allowed: &'static [&'static str],
+    },
     Parse(roxmltree::Error),
 }
 
@@ -29,6 +35,15 @@ impl std::fmt::Display for Error {
                 write!(f, "expected {expected}, but got {actual}")
             }
             Error::Parse(e) => e.fmt(f),
+            Error::InvalidAttribueValue {
+                tag,
+                attribute,
+                value,
+                allowed,
+            } => write!(
+                f,
+                r#"invalid value for attribute: <{tag} ... {attribute}="{value}" ... />, allowed values are {allowed:?}"#
+            ),
         }
     }
 }

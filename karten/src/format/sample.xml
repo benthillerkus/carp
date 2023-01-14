@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<deck name="My Name">
+<deck name="My Name" theme="dark">
   <card>The first card contains a <blank />.</card>
   <card><italic><blank/></italic></card>
   <card>This is <italic>very</italic> good.</card>
