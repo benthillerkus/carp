@@ -31,7 +31,7 @@ impl Export for PNGExporter {
         }
         let writer = File::create(
             self.directory
-                .with_file_name(artifact.name)
+                .with_file_name(artifact.to_string())
                 .with_extension("png"),
         )?;
         let mut header = Header::new();

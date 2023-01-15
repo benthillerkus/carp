@@ -1,5 +1,7 @@
 use std::{borrow::Cow, fmt::Display, ops::Range};
 
+use carp::Backside;
+
 mod error;
 mod xml;
 
@@ -8,7 +10,7 @@ pub struct Deck<'a> {
     pub name: Cow<'a, str>,
     pub cards: Vec<Card<'a>>,
     pub theme: Theme,
-    pub back: Back,
+    pub back: Backside,
 }
 
 #[derive(Debug, PartialEq, Default)]
@@ -16,13 +18,6 @@ pub enum Theme {
     #[default]
     Light,
     Dark,
-}
-
-#[derive(Debug, PartialEq, Default)]
-pub enum Back {
-    #[default]
-    Shared,
-    Individual,
 }
 
 pub type Content<'a> = Vec<Markup<'a>>;

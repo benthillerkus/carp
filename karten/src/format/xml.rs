@@ -49,13 +49,13 @@ impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
             back: node
                 .attribute("back")
                 .map_or(Ok(Default::default()), |s| match s {
-                    "shared" | "Shared" | "SHARED" => Ok(Back::Shared),
-                    "individual" | "Individual" | "INDIVIDUAL" => Ok(Back::Individual),
+                    "shared" => Ok(Backside::Shared),
+                    "unique" => Ok(Backside::Unique),
                     value => Err(Error::InvalidAttribueValue {
                         tag: String::from("deck"),
                         attribute: "back",
                         value: String::from(value),
-                        allowed: &["shared", "individual"],
+                        allowed: &["shared", "unique"],
                     }),
                 })?,
             cards: {
