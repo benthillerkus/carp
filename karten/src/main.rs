@@ -1,6 +1,6 @@
 use carp::{
     artifact::{Amount, Artifact, Content},
-    dimensions::Dimensions,
+    dimensions::{AspectRatio, Dimensions},
     export::{Export, PNGExporter},
     renderer::ImageRenderer,
     tts::TTS,
@@ -27,7 +27,7 @@ struct Args {
 
     /// The aspect ratio of a single card. Defaults to 5w/7.2h.
     /// 1.0 is square, 2.0 is twice as wide as it is tall, etc.
-    #[arg(short, long, default_value_t = BASE_ASPECT_RATIO)]
+    #[arg(short, long, default_value_t = BASE_ASPECT_RATIO.0)]
     aspect_ratio: f64,
 
     /// The image resolution for the deck. Defaults to 4096x4096.
@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         args.output = std::env::current_dir()?.join(args.output);
     }
 
-    let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
+    let dimensions = Dimensions::new(args.resolution, AspectRatio(args.aspect_ratio));
 
     let prompts = fs::read_to_string("prompts.xml")?;
     let prompts = format::Deck::try_from(prompts.as_ref())?;
@@ -104,7 +104,7 @@ fn spawn_deck(
             &front.data,
             &back.data,
             front.content,
-            false,
+            front.aspect_ratio.map_or(false, |a| a.is_landscape()),
             true,
         ))?;
 

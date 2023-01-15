@@ -1,3 +1,5 @@
+use dimensions::AspectRatio;
+
 pub mod artifact;
 pub mod device;
 pub mod dimensions;
@@ -6,7 +8,7 @@ pub mod renderer;
 pub mod tts;
 
 pub const BASE_RESOLUTION: u32 = 4096;
-pub const BASE_ASPECT_RATIO: f64 = 5. / 7.2;
+pub const BASE_ASPECT_RATIO: AspectRatio = AspectRatio(5. / 7.2);
 pub const ROWS: u32 = 7;
 pub const COLUMNS: u32 = 10;
 

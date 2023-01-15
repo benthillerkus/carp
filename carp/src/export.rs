@@ -10,7 +10,7 @@ use mtpng::{
 };
 use piet_common::ImageBuf;
 
-use crate::artifact::Artifact;
+use crate::{artifact::Artifact, dimensions::AspectRatio};
 
 pub trait Export {
     type Data;
@@ -37,6 +37,10 @@ impl Export for PNGExporter {
         }
 
         let (pixels, artifact) = artifact.extract_data();
+        let aspect_ratio = Some(AspectRatio::new(
+            pixels.width() as f64,
+            pixels.height() as f64,
+        ));
 
         let path = self
             .directory
@@ -53,6 +57,9 @@ impl Export for PNGExporter {
         encoder.write_image_rows(pixels.raw_pixels())?;
         encoder.finish()?;
 
-        Ok(artifact.with_data(path))
+        Ok(Artifact {
+            aspect_ratio,
+            ..artifact.with_data(path)
+        })
     }
 }

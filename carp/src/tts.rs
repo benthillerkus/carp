@@ -41,6 +41,7 @@ impl TTS {
                         shared: deck.share_back(),
                         content: Content::Single,
                         amount: Amount::Single,
+                        aspect_ratio: Default::default(),
                     })
             }))
         } else {
@@ -73,6 +74,7 @@ impl TTS {
                         data: image,
                         side,
                         shared: deck.share_back(),
+                        aspect_ratio: Default::default(),
                         content: Content::Sheet {
                             rows: ROWS as u16,
                             columns: COLUMNS as u16,

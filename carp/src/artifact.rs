@@ -1,4 +1,4 @@
-use crate::{card::Side, Backside};
+use crate::{card::Side, dimensions::AspectRatio, Backside};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +42,7 @@ pub struct Artifact<Format> {
     pub side: Side,
     pub content: Content,
     pub amount: Amount,
+    pub aspect_ratio: Option<AspectRatio>,
 }
 
 impl<Format> Display for Artifact<Format> {
@@ -63,6 +64,7 @@ impl<Format> Artifact<Format> {
             side: self.side,
             shared: self.shared,
             deck: self.deck,
+            aspect_ratio: self.aspect_ratio,
         }
     }
 
@@ -76,6 +78,7 @@ impl<Format> Artifact<Format> {
                 side: self.side,
                 shared: self.shared,
                 deck: self.deck,
+                aspect_ratio: self.aspect_ratio,
             },
         )
     }
