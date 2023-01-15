@@ -14,7 +14,7 @@ pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub use {
-    card::Card,
+    card::{Card, Side},
     deck::{Backside, Deck},
 };
 

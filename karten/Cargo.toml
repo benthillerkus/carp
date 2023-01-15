@@ -13,3 +13,4 @@ piet-common = { version = "0.6.0" }
 roxmltree = "0.17.0"
 carp = { path = "../carp" }
 once_cell = "1.17.0"
+tts-external-api = "0.1.1"

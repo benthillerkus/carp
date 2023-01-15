@@ -1,13 +1,18 @@
 use carp::{
+    artifact::{Amount, Artifact, Content},
     dimensions::Dimensions,
     export::{Export, PNGExporter},
     renderer::ImageRenderer,
     tts::TTS,
-    BASE_ASPECT_RATIO, BASE_RESOLUTION,
+    Side, BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
 use clap::Parser;
-use std::fs::{self};
 use std::{error::Error, path::PathBuf};
+use std::{
+    fs::{self},
+    path::Path,
+};
+use tts_external_api::ExternalEditorApi;
 
 mod deck;
 mod format;
@@ -35,6 +40,9 @@ struct Args {
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = Args::parse();
     args.output.push("nofile");
+    if args.output.is_relative() {
+        args.output = std::env::current_dir()?.join(args.output);
+    }
 
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
 
@@ -49,12 +57,113 @@ fn main() -> Result<(), Box<dyn Error>> {
         directory: args.output,
     };
 
-    for artifact in TTS::build(&prompts, &renderer)
+    let api = ExternalEditorApi::new();
+
+    let (mut prompts, mut quips): (Vec<_>, _) = TTS::build(&prompts, &renderer)
         .chain(TTS::build(&quips, &renderer))
         .filter_map(Result::ok)
-    {
-        exporter.export(artifact)?;
-    }
+        // .filter(|_| false)
+        .map(|deck| exporter.export(deck).unwrap())
+        .partition(|artifact| artifact.deck == "Prompts");
+
+    spawn_deck(&api, &mut quips, (-1.2, 0.0, 0.0))?;
+    spawn_deck(&api, &mut prompts, (1.2, 0.0, 0.0))?;
 
     Ok(())
+}
+
+fn spawn_deck(
+    api: &ExternalEditorApi,
+    deck: &mut [Artifact<PathBuf>],
+    position: (f32, f32, f32),
+) -> Result<(), Box<dyn Error>> {
+    if deck.is_empty() {
+        return Ok(());
+    }
+
+    // Make sure backs and fronts are next to one another
+    deck.sort_unstable_by(|a, b| match (a.amount, b.amount) {
+        (Amount::Single, Amount::Single) => std::cmp::Ordering::Equal,
+        (Amount::Single, Amount::Multiple { .. }) => std::cmp::Ordering::Less,
+        (Amount::Multiple { .. }, Amount::Single) => std::cmp::Ordering::Greater,
+        (Amount::Multiple { index: ia, .. }, Amount::Multiple { index: ib, .. }) => ia.cmp(&ib),
+    });
+
+    let backs = deck
+        .iter()
+        .filter(|artifact| artifact.side == Side::Back)
+        .cycle();
+
+    for (front, back) in deck
+        .iter()
+        .filter(|artifact| artifact.side == Side::Front)
+        .zip(backs)
+    {
+        let answer = api.execute(spawn_card_or_deck_tts(
+            position,
+            &front.data,
+            &back.data,
+            front.content,
+            false,
+            true,
+        ))?;
+
+        println!("{:#?}", answer);
+    }
+    Ok(())
+}
+
+fn spawn_card_or_deck_tts(
+    position: (f32, f32, f32),
+    face: &Path,
+    back: &Path,
+    content: Content,
+    sideways: bool,
+    back_is_hidden: bool,
+) -> String {
+    let face = face.display().to_string().replace('\\', "//");
+    let back = back.display().to_string().replace('\\', "//");
+
+    match content {
+        Content::Sheet {
+            columns,
+            rows,
+            total,
+        } => {
+            format!(
+                r#"spawnObject({{
+    type = "DeckCustom",
+    position = {{{}, {}, {}}},
+    snap_to_grid = true,
+    callback_function = function(spawned_object)
+        spawned_object.setCustomObject({{
+            face = "file://{face}",
+            back = "file://{back}",
+            width = {columns},
+            height = {rows},
+            number = {total},
+            sideways = {sideways},
+            back_is_hidden = {back_is_hidden},
+        }})
+    end
+}})"#,
+                position.0, position.1, position.2,
+            )
+        }
+        Content::Single => format!(
+            r#"spawnObject({{
+type = "CardCustom",
+position = {{{}, {}, {}}},
+snap_to_grid = true,
+callback_function = function(spawned_object)
+    spawned_object.setCustomObject({{
+        face = "file://{face}",
+        back = "file://{back}",
+        sideways = {sideways},
+    }})
+end
+}})"#,
+            position.0, position.1, position.2,
+        ),
+    }
 }
