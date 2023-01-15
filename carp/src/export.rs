@@ -15,7 +15,10 @@ use crate::artifact::Artifact;
 pub trait Export {
     type Data;
     type Output;
-    fn export(&mut self, artifact: Artifact<Self::Data>) -> Result<Self::Output, Box<dyn Error>>;
+    fn export(
+        &mut self,
+        artifact: Artifact<Self::Data>,
+    ) -> Result<Artifact<Self::Output>, Box<dyn Error>>;
 }
 
 pub struct PNGExporter {
@@ -24,18 +27,24 @@ pub struct PNGExporter {
 
 impl Export for PNGExporter {
     type Data = ImageBuf;
-    type Output = ();
-    fn export(&mut self, artifact: Artifact<Self::Data>) -> Result<Self::Output, Box<dyn Error>> {
+    type Output = PathBuf;
+    fn export(
+        &mut self,
+        artifact: Artifact<Self::Data>,
+    ) -> Result<Artifact<Self::Output>, Box<dyn Error>> {
         if let Some(parent) = self.directory.parent() {
             fs::create_dir_all(parent)?;
         }
-        let writer = File::create(
-            self.directory
-                .with_file_name(artifact.to_string())
-                .with_extension("png"),
-        )?;
+
+        let (pixels, artifact) = artifact.extract_data();
+
+        let path = self
+            .directory
+            .with_file_name(artifact.to_string())
+            .with_extension("png");
+
+        let writer = File::create(&path)?;
         let mut header = Header::new();
-        let pixels = artifact.data;
         header.set_size(pixels.width() as u32, pixels.height() as u32)?;
         header.set_color(ColorType::TruecolorAlpha, 8)?;
         let options = Options::new();
@@ -44,6 +53,6 @@ impl Export for PNGExporter {
         encoder.write_image_rows(pixels.raw_pixels())?;
         encoder.finish()?;
 
-        Ok(())
+        Ok(artifact.with_data(path))
     }
 }

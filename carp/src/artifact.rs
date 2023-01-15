@@ -53,3 +53,30 @@ impl<Format> Display for Artifact<Format> {
         )
     }
 }
+
+impl<Format> Artifact<Format> {
+    pub fn with_data<Other>(self, data: Other) -> Artifact<Other> {
+        Artifact {
+            data,
+            amount: self.amount,
+            content: self.content,
+            side: self.side,
+            shared: self.shared,
+            deck: self.deck,
+        }
+    }
+
+    pub fn extract_data(self) -> (Format, Artifact<()>) {
+        (
+            self.data,
+            Artifact {
+                data: (),
+                amount: self.amount,
+                content: self.content,
+                side: self.side,
+                shared: self.shared,
+                deck: self.deck,
+            },
+        )
+    }
+}
