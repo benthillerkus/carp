@@ -79,8 +79,8 @@ impl<'a> CardTrait for Card<'a> {
             .new_text_layout(format!("{}", index + 1))
             .font(theme.font.to_owned(), 24.)
             .alignment(TextAlignment::Center)
-            .text_color(Color::BLACK)
-            .max_width(area.width())
+            .text_color(theme.color)
+            .max_width(f64::INFINITY)
             .build()
             .unwrap();
 
