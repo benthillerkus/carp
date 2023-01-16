@@ -36,7 +36,6 @@ impl Export for PNGExporter {
         artifact: Artifact<Self::Data>,
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>> {
         let start = std::time::Instant::now();
-        trace!("Exporting artifact {:?}", artifact.to_string());
 
         if let Some(parent) = self.directory.parent() {
             fs::create_dir_all(parent)?;
@@ -64,7 +63,11 @@ impl Export for PNGExporter {
         encoder.write_image_rows(pixels.raw_pixels())?;
         encoder.finish()?;
 
-        trace!("Exported artifact in {:?}", start.elapsed());
+        trace!(
+            "Exported {:?}.png in {:?}",
+            artifact.to_string(),
+            start.elapsed()
+        );
 
         Ok(Artifact {
             aspect_ratio,

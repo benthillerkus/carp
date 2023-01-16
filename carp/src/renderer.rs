@@ -78,7 +78,7 @@ impl Render for ImageRenderer<D2DRenderContext<'_>> {
         let trace_full_d = trace_function_end.duration_since(trace_function_start);
         let trace_full_df32 = trace_full_d.as_secs_f32();
         trace!(
-            "Rendered sheet in {:?} of which was {}% waiting for device, {}% drawing, {}% copying",
+            "Rendered sheet in {:?}: {:.0}% wait for device, {:.0}% draw, {:.0}% copy",
             trace_full_d,
             trace_draw_start
                 .duration_since(trace_function_start)
@@ -122,7 +122,7 @@ impl Render for ImageRenderer<D2DRenderContext<'_>> {
         let trace_full_d = trace_function_end.duration_since(trace_function_start);
         let trace_full_df32 = trace_full_d.as_secs_f32();
         trace!(
-            "Rendered card in {:?} of which was {}% waiting for device, {}% drawing, {}% copying",
+            "Rendered card in {:?}: {:.0}% wait for device, {:.0}% draw, {:.0}% copy",
             trace_full_d,
             trace_draw_start
                 .duration_since(trace_function_start)
