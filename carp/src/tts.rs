@@ -117,16 +117,17 @@ impl TTS {
         let border = RoundedRect::from_rect(card_area, 20.);
         for (index, card) in cards.iter().enumerate() {
             ctx.with_save(|ctx| {
-                let index = index as u32 + page * (ROWS * COLUMNS);
+                let sheet_index = index as u32;
                 ctx.transform(Affine::translate((
-                    (index % COLUMNS) as f64 * dimensions.card.width,
-                    (index / COLUMNS) as f64 * dimensions.card.height,
+                    (sheet_index % COLUMNS) as f64 * dimensions.card.width,
+                    (sheet_index / COLUMNS) as f64 * dimensions.card.height,
                 )));
                 ctx.clip(border);
+                let deck_index = page * (ROWS * COLUMNS);
                 if side == Side::Back {
-                    card.draw_back(deck, ctx, index, dimensions);
+                    card.draw_back(deck, ctx, deck_index, dimensions);
                 } else {
-                    card.draw(deck, ctx, index, dimensions);
+                    card.draw(deck, ctx, deck_index, dimensions);
                 }
                 Ok(())
             })?;

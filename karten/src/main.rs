@@ -38,7 +38,7 @@ struct Args {
     resolution: u32,
 
     /// Whether to sync the deck into the Tabletop Simulator.
-    ///
+    #[arg(short, long, default_value = "false")]
     sync_to_tts: bool,
 }
 
