@@ -81,17 +81,17 @@ impl TTS {
                             total: chunk.len() as u16,
                         },
                         amount: {
-                            let len = deck.cards().len() as u32;
-                            let page = ROWS * COLUMNS;
+                            let in_deck = deck.cards().len() as u32;
+                            let per_page = ROWS * COLUMNS;
 
-                            if len <= page {
+                            if in_deck <= per_page {
                                 Amount::Single
                             } else {
                                 Amount::Multiple {
-                                    index: page as u16,
+                                    index: page as u16 + 1,
                                     total: {
-                                        let total = len / page;
-                                        let remainder = len % page;
+                                        let total = in_deck / per_page;
+                                        let remainder = in_deck % per_page;
                                         total as u16 + u16::from(remainder > 0)
                                     },
                                 }
