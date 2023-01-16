@@ -7,6 +7,7 @@ use carp::{
     Side, BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
 use clap::Parser;
+use log::info;
 use std::{error::Error, path::PathBuf};
 use std::{
     fs::{self},
@@ -35,9 +36,15 @@ struct Args {
     /// so the image can never be larger than resolution².
     #[arg(short, long, default_value_t = BASE_RESOLUTION)]
     resolution: u32,
+
+    /// Whether to sync the deck into the Tabletop Simulator.
+    ///
+    sync_to_tts: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let start = std::time::Instant::now();
+    env_logger::init();
     let mut args = Args::parse();
     args.output.push("nofile");
     if args.output.is_relative() {
@@ -45,49 +52,69 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let dimensions = Dimensions::new(args.resolution, AspectRatio(args.aspect_ratio));
-
-    let prompts = fs::read_to_string("prompts.xml")?;
-    let prompts = format::Deck::try_from(prompts.as_ref())?;
-    let quips = fs::read_to_string("quips.xml")?;
-    let quips = format::Deck::try_from(quips.as_ref())?;
-
     let renderer = ImageRenderer::new(dimensions);
 
-    let mut exporter = PNGExporter {
+    let exporter = PNGExporter {
         directory: args.output,
     };
 
-    let api = ExternalEditorApi::new();
+    let input = fs::read_dir("input")?;
+    input
+        .filter_map(|entry| {
+            if let Ok(entry) = entry {
+                if let Ok(true) = entry.file_type().map(|t| t.is_file()) {
+                    let path = entry.path();
 
-    let (mut prompts, mut quips): (Vec<_>, _) = TTS::build(&prompts, &renderer)
-        .chain(TTS::build(&quips, &renderer))
+                    if let Some(true) = path.extension().map(|ext| ext == "xml" || ext == "deck") {
+                        return Some(path);
+                    }
+                }
+            }
+            None
+        })
+        .map(fs::read_to_string)
         .filter_map(Result::ok)
-        // .filter(|_| false)
-        .map(|deck| exporter.export(deck).unwrap())
-        .partition(|artifact| artifact.deck == "Prompts");
+        .map(|s| {
+            let deck = format::Deck::try_from(s.as_ref()).unwrap();
 
-    spawn_deck(&api, &mut quips, (-1.2, 0.0, 0.0))?;
-    spawn_deck(&api, &mut prompts, (1.2, 0.0, 0.0))?;
+            let mut artifacts: Vec<_> = TTS::build(&deck, &renderer)
+                .map(|e| e.unwrap())
+                .map(|artifact| exporter.export(artifact).unwrap())
+                .collect();
+
+            // Make sure backs and fronts are next to one another
+            artifacts.sort_unstable_by(|a, b| match (a.amount, b.amount) {
+                (Amount::Single, Amount::Single) => std::cmp::Ordering::Equal,
+                (Amount::Single, Amount::Multiple { .. }) => std::cmp::Ordering::Less,
+                (Amount::Multiple { .. }, Amount::Single) => std::cmp::Ordering::Greater,
+                (Amount::Multiple { index: ia, .. }, Amount::Multiple { index: ib, .. }) => {
+                    ia.cmp(&ib)
+                }
+            });
+
+            artifacts
+        })
+        .enumerate()
+        .for_each(|(index, deck)| {
+            if args.sync_to_tts {
+                let api = ExternalEditorApi::new();
+                spawn_deck(&api, &deck, (index as f32 * 2.4, 0.0, 0.0)).unwrap();
+            }
+        });
+
+    info!("Done in {:?}", start.elapsed());
 
     Ok(())
 }
 
 fn spawn_deck(
     api: &ExternalEditorApi,
-    deck: &mut [Artifact<PathBuf>],
+    deck: &[Artifact<PathBuf>],
     position: (f32, f32, f32),
 ) -> Result<(), Box<dyn Error>> {
     if deck.is_empty() {
         return Ok(());
     }
-
-    // Make sure backs and fronts are next to one another
-    deck.sort_unstable_by(|a, b| match (a.amount, b.amount) {
-        (Amount::Single, Amount::Single) => std::cmp::Ordering::Equal,
-        (Amount::Single, Amount::Multiple { .. }) => std::cmp::Ordering::Less,
-        (Amount::Multiple { .. }, Amount::Single) => std::cmp::Ordering::Greater,
-        (Amount::Multiple { index: ia, .. }, Amount::Multiple { index: ib, .. }) => ia.cmp(&ib),
-    });
 
     let backs = deck
         .iter()
@@ -99,7 +126,7 @@ fn spawn_deck(
         .filter(|artifact| artifact.side == Side::Front)
         .zip(backs)
     {
-        let answer = api.execute(spawn_card_or_deck_tts(
+        let _ = api.execute(spawn_card_or_deck_tts(
             position,
             &front.data,
             &back.data,
@@ -107,8 +134,6 @@ fn spawn_deck(
             front.aspect_ratio.map_or(false, |a| a.is_landscape()),
             true,
         ))?;
-
-        println!("{:#?}", answer);
     }
     Ok(())
 }

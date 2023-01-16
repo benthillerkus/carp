@@ -1,6 +1,7 @@
 use std::{
     error::Error,
     fs::{self, File},
+    io::BufWriter,
     path::PathBuf,
 };
 
@@ -10,13 +11,15 @@ use mtpng::{
 };
 use piet_common::ImageBuf;
 
+use log::trace;
+
 use crate::{artifact::Artifact, dimensions::AspectRatio};
 
 pub trait Export {
     type Data;
     type Output;
     fn export(
-        &mut self,
+        &self,
         artifact: Artifact<Self::Data>,
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>>;
 }
@@ -29,9 +32,12 @@ impl Export for PNGExporter {
     type Data = ImageBuf;
     type Output = PathBuf;
     fn export(
-        &mut self,
+        &self,
         artifact: Artifact<Self::Data>,
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>> {
+        let start = std::time::Instant::now();
+        trace!("Exporting artifact {:?}", artifact.to_string());
+
         if let Some(parent) = self.directory.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -48,6 +54,7 @@ impl Export for PNGExporter {
             .with_extension("png");
 
         let writer = File::create(&path)?;
+        let writer = BufWriter::new(writer);
         let mut header = Header::new();
         header.set_size(pixels.width() as u32, pixels.height() as u32)?;
         header.set_color(ColorType::TruecolorAlpha, 8)?;
@@ -56,6 +63,8 @@ impl Export for PNGExporter {
         encoder.write_header(&header)?;
         encoder.write_image_rows(pixels.raw_pixels())?;
         encoder.finish()?;
+
+        trace!("Exported artifact in {:?}", start.elapsed());
 
         Ok(Artifact {
             aspect_ratio,
