@@ -35,6 +35,7 @@ impl Display for Amount {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Artifact<Format> {
     pub deck: String,
     pub shared: Backside,

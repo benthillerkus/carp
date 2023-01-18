@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use piet_common::kurbo::Size;
 
 use crate::{BASE_ASPECT_RATIO, BASE_RESOLUTION, COLUMNS, ROWS};
@@ -28,6 +30,40 @@ impl AspectRatio {
 
     pub fn is_taller_than(&self, other: AspectRatio) -> bool {
         self.0 < other.0
+    }
+}
+
+impl FromStr for AspectRatio {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('/').collect();
+
+        match parts.len() {
+            1 => parts[0]
+                .trim()
+                .parse::<f64>()
+                .map(AspectRatio)
+                .map_err(|_| format!("invalid aspect ratio: {} (could not parse as float)", s)),
+            2 => {
+                let width = parts[0]
+                    .trim()
+                    .parse::<f64>()
+                    .map_err(|_| format!("Invalid aspect ratio: {} (could not parse width)", s))?;
+                let height = parts[1]
+                    .trim()
+                    .parse::<f64>()
+                    .map_err(|_| format!("Invalid aspect ratio: {} (could not parse height)", s))?;
+                Ok(AspectRatio::new(width, height))
+            }
+            _ => Err(format!("cannot parse an aspec ratio from this: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for AspectRatio {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "1/{:.2}", 1.0 / self.0)
     }
 }
 

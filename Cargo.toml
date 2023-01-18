@@ -9,6 +9,13 @@ edition = "2021"
 authors = ["Bent Hillerkus"]
 repository = "https://github.com/benthillerkus/karten"
 
+[workspace.dependencies]
+carp = { path = "carp" }
+karten = { path = "karten" }
+log = "0.4.17"
+piet-common = "0.6.0"
+
 [profile.dev.package]
 mtpng = { opt-level = 3 }
 piet-common = { opt-level = 3 }
+backtrace = { opt-level = 3 }

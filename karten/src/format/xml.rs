@@ -1,4 +1,7 @@
-use super::{error::Error, *};
+use super::{
+    error::{Error, ErrorKind},
+    *,
+};
 use roxmltree::{Document, Node};
 use std::{borrow::Cow, collections::VecDeque};
 
@@ -33,30 +36,30 @@ impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
             name: node
                 .attribute("name")
                 .map(|name| Cow::Owned(name.to_owned()))
-                .ok_or(Error::MissingDeckName)?,
+                .ok_or(Error::from(ErrorKind::MissingDeckName))?,
             theme: node
                 .attribute("theme")
                 .map_or(Ok(Default::default()), |s| match s {
                     "light" | "Light" | "LIGHT" => Ok(Theme::Light),
                     "dark" | "Dark" | "DARK" => Ok(Theme::Dark),
-                    value => Err(Error::InvalidAttribueValue {
-                        tag: String::from("deck"),
-                        attribute: "theme",
+                    value => Err(Error::from(ErrorKind::InvalidAttribueValue {
+                        tag: "deck".into(),
+                        attribute: "theme".into(),
                         value: String::from(value),
                         allowed: &["light", "dark"],
-                    }),
+                    })),
                 })?,
             back: node
                 .attribute("back")
                 .map_or(Ok(Default::default()), |s| match s {
                     "shared" => Ok(Backside::Shared),
                     "unique" => Ok(Backside::Unique),
-                    value => Err(Error::InvalidAttribueValue {
-                        tag: String::from("deck"),
-                        attribute: "back",
-                        value: String::from(value),
+                    value => Err(Error::from(ErrorKind::InvalidAttribueValue {
+                        tag: "deck".into(),
+                        attribute: "back".into(),
+                        value: value.into(),
                         allowed: &["shared", "unique"],
-                    }),
+                    })),
                 })?,
             cards: {
                 let mut result = Vec::new();
@@ -81,10 +84,10 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
 
     fn try_from(node: Node<'_, 'a>) -> Result<Self, Self::Error> {
         if !node.has_tag_name("card") {
-            Err(Error::UnexpectedTag {
-                expected: "card",
+            Err(Error::from(ErrorKind::UnexpectedTag {
+                expected: "card".into(),
                 actual: node.tag_name().name().to_owned(),
-            })
+            }))
         } else {
             Ok(Self {
                 content: {
