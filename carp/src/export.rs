@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fs::{self, File},
-    io::BufWriter,
+    io::Write,
     path::PathBuf,
 };
 
@@ -24,22 +24,47 @@ pub trait Export {
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>>;
 }
 
-pub struct PNGExporter {
+pub struct FileExporter {
     pub directory: PathBuf,
 }
 
+impl Export for FileExporter {
+    type Data = Vec<u8>;
+    type Output = PathBuf;
+
+    fn export(
+        &self,
+        artifact: Artifact<Self::Data>,
+    ) -> Result<Artifact<Self::Output>, Box<dyn Error>> {
+        if let Some(parent) = self.directory.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let path = self
+            .directory
+            .with_file_name(artifact.to_string())
+            .with_extension("png"); // TODO Make this configurable
+
+        let mut writer = File::create(&path)?;
+
+        writer.write_all(&artifact.data)?;
+
+        Ok(Artifact {
+            aspect_ratio: artifact.aspect_ratio,
+            ..artifact.with_data(path)
+        })
+    }
+}
+pub struct PNGExporter;
+
 impl Export for PNGExporter {
     type Data = ImageBuf;
-    type Output = PathBuf;
+    type Output = Vec<u8>;
     fn export(
         &self,
         artifact: Artifact<Self::Data>,
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>> {
         let start = std::time::Instant::now();
-
-        if let Some(parent) = self.directory.parent() {
-            fs::create_dir_all(parent)?;
-        }
 
         let (pixels, artifact) = artifact.extract_data();
         let aspect_ratio = Some(AspectRatio::new(
@@ -47,21 +72,14 @@ impl Export for PNGExporter {
             pixels.height() as f64,
         ));
 
-        let path = self
-            .directory
-            .with_file_name(artifact.to_string())
-            .with_extension("png");
-
-        let writer = File::create(&path)?;
-        let writer = BufWriter::new(writer);
         let mut header = Header::new();
         header.set_size(pixels.width() as u32, pixels.height() as u32)?;
         header.set_color(ColorType::TruecolorAlpha, 8)?;
         let options = Options::new();
-        let mut encoder = Encoder::new(writer, &options);
+        let mut encoder = Encoder::new(Vec::new(), &options);
         encoder.write_header(&header)?;
         encoder.write_image_rows(pixels.raw_pixels())?;
-        encoder.finish()?;
+        let buf = encoder.finish()?;
 
         trace!(
             "Exported {:?}.png in {:?}",
@@ -71,7 +89,7 @@ impl Export for PNGExporter {
 
         Ok(Artifact {
             aspect_ratio,
-            ..artifact.with_data(path)
+            ..artifact.with_data(buf)
         })
     }
 }

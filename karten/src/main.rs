@@ -1,12 +1,12 @@
 use carp::{
-    artifact::{Amount, Artifact, Content},
+    artifact::{Amount, Artifact},
     dimensions::{AspectRatio, Dimensions},
-    export::{Export, PNGExporter},
+    export::{Export, FileExporter, PNGExporter},
     renderer::ImageRenderer,
     tts::TTS,
-    Side, BASE_ASPECT_RATIO, BASE_RESOLUTION,
+    BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 use dotenvy::dotenv;
 use log::info;
@@ -23,12 +23,13 @@ mod deck;
 mod format;
 mod karte;
 mod theme;
+mod tts;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
-    #[arg(short, long, default_value = "export/")]
-    output: PathBuf,
+    #[command(subcommand)]
+    output: Output,
 
     /// The aspect ratio of a single card.
     ///
@@ -47,99 +48,167 @@ struct Args {
     /// Whether to sync the deck into the Tabletop Simulator.
     #[arg(short, long, default_value_t = false)]
     sync_to_tts: bool,
+}
 
-    /// The name of the S3 bucket to export to.
-    ///
-    /// The bucket must exist and you must have the folliwng permissions:
-    /// - `s3:GetBucketLocation`
-    /// - `s3:PutObject`
-    ///
-    /// Credentials are read from the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-    #[arg(long, env)]
-    s3_bucket: String,
+#[derive(Subcommand, Debug)]
+enum Output {
+    /// Export the deck to a directory.
+    File {
+        #[arg(short, long, default_value = "export/")]
+        directory: PathBuf,
+    },
+    /// Upload the deck into an S3 (compatible) bucket.
+    S3 {
+        /// The name of the S3 bucket to export to.
+        ///
+        /// The bucket must exist and you must have the folliwng permissions:
+        /// - `s3:GetBucketLocation`
+        /// - `s3:PutObject`
+        ///
+        /// Credentials are read from the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+        #[arg(long, env)]
+        s3_bucket: String,
 
-    #[arg(long, env)]
-    s3_region: String,
+        #[arg(long, env)]
+        s3_region: String,
 
-    /// The S3 endpoint to use. If not set, the default endpoint for the region is used.
-    /// In Minio this setting is called "Server Location".
-    #[arg(long, env)]
-    s3_endpoint: Option<String>,
+        /// The S3 endpoint to use. If not set, the default endpoint for the region is used.
+        /// In Minio this setting is called "Server Location".
+        #[arg(long, env)]
+        s3_endpoint: Option<String>,
 
-    /// Whether to use the path style or the subdomain style for S3 URLs.
-    ///
-    /// Minio uses the path style per default, AWS uses the subdomain style.
-    #[arg(long, env, default_value_t = false)]
-    s3_path_style: bool,
+        /// Whether to use the path style or the subdomain style for S3 URLs.
+        ///
+        /// Minio uses the path style per default, AWS uses the subdomain style.
+        #[arg(long, env, default_value_t = false)]
+        s3_path_style: bool,
+    },
+}
+
+impl Default for Output {
+    fn default() -> Self {
+        Output::File {
+            directory: PathBuf::from("export/"),
+        }
+    }
+}
+
+struct S3Exporter {
+    pub bucket: Bucket,
+}
+
+impl Export for S3Exporter {
+    type Data = Vec<u8>;
+    type Output = PathBuf;
+
+    fn export(
+        &self,
+        artifact: Artifact<Self::Data>,
+    ) -> std::result::Result<Artifact<Self::Output>, Box<dyn Error>> {
+        let ulid = format!("{}.png", Ulid::new());
+        self.bucket.put_object(ulid.clone(), &artifact.data)?;
+        let artifact = artifact.clone();
+        Ok(artifact.with_data(Path::new(&self.bucket.url()).join(ulid)))
+    }
+}
+
+impl Output {
+    fn exporter(self) -> Result<Box<dyn Export<Data = Vec<u8>, Output = PathBuf>>> {
+        match self {
+            Output::File { mut directory } => {
+                directory.push("nofile");
+                let directory = if directory.is_relative() {
+                    std::env::current_dir()?.join(directory)
+                } else {
+                    directory
+                };
+
+                Ok(Box::new(FileExporter { directory }))
+            }
+            Output::S3 {
+                s3_bucket,
+                s3_region,
+                s3_endpoint,
+                s3_path_style,
+            } => {
+                let bucket = Bucket::new(
+                    &s3_bucket,
+                    if let Some(endpoint) = s3_endpoint {
+                        Region::Custom {
+                            region: s3_region,
+                            endpoint,
+                        }
+                    } else {
+                        Region::from_str(&s3_region).with_context(|| {
+                            format!("couldn't parse a S3 Region from {}", s3_region)
+                        })?
+                    },
+                    Credentials::from_env()
+                        .with_context(|| "couldn't build credentials from env vars")?,
+                )?;
+
+                let bucket = if s3_path_style {
+                    bucket.with_path_style()
+                } else {
+                    bucket
+                };
+
+                bucket
+                    .location()
+                    .with_context(|| format!("couldn't get bucket location: {}", bucket.host()))
+                    .with_suggestion(|| {
+                        format!("does {} exist in {}?", bucket.host(), bucket.region,)
+                    })
+                    .with_suggestion(|| {
+                        format!(
+                            "the bucket is configured with {}. Maybe {} would work?",
+                            if bucket.is_path_style() {
+                                "path style"
+                            } else {
+                                "subdomain style"
+                            },
+                            if bucket.is_path_style() {
+                                "subdomain style"
+                            } else {
+                                "path style"
+                            },
+                        )
+                    })
+                    .with_suggestion(|| {
+                        format!(
+                            "does {:?} have the permission `s3:GetBucketLocation`?",
+                            bucket.credentials().access_key
+                        )
+                    })?;
+
+                Ok(Box::new(S3Exporter { bucket }))
+            }
+        }
+    }
 }
 
 fn main() -> Result<()> {
     let start = std::time::Instant::now();
+    // Setup stuff
     color_eyre::config::HookBuilder::default()
         .issue_url(concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new"))
         .add_issue_metadata("version", env!("CARGO_PKG_VERSION"))
+        .issue_filter(|e| match e {
+            color_eyre::ErrorKind::Recoverable(_) => false,
+            color_eyre::ErrorKind::NonRecoverable(_) => true,
+        })
         .install()?;
     dotenv()?;
     env_logger::init();
-    let mut args = Args::parse();
-    args.output.push("nofile");
-    if args.output.is_relative() {
-        args.output = std::env::current_dir()?.join(args.output);
-    }
+    let args = Args::parse();
 
+    // Configure pipeline
+    let exporter = args.output.exporter()?;
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
     let renderer = ImageRenderer::new(dimensions);
+    let pngexporter = PNGExporter;
 
-    let exporter = PNGExporter {
-        directory: args.output,
-    };
-
-    let bucket = Bucket::new(
-        &args.s3_bucket,
-        if let Some(endpoint) = args.s3_endpoint {
-            Region::Custom {
-                region: args.s3_region,
-                endpoint,
-            }
-        } else {
-            Region::from_str(&args.s3_region)
-                .with_context(|| format!("couldn't parse a S3 Region from {}", args.s3_region))?
-        },
-        Credentials::from_env().with_context(|| "couldn't build credentials from env vars")?,
-    )?;
-
-    let bucket = if args.s3_path_style {
-        bucket.with_path_style()
-    } else {
-        bucket
-    };
-
-    bucket
-        .location()
-        .with_context(|| format!("couldn't get bucket location: {}", bucket.host()))
-        .with_suggestion(|| format!("does {} exist in {}?", bucket.host(), bucket.region,))
-        .with_suggestion(|| {
-            format!(
-                "the bucket is configured with {}. Maybe {} would work?",
-                if bucket.is_path_style() {
-                    "path style"
-                } else {
-                    "subdomain style"
-                },
-                if bucket.is_path_style() {
-                    "subdomain style"
-                } else {
-                    "path style"
-                },
-            )
-        })
-        .with_suggestion(|| {
-            format!(
-                "does {:?} have the permission `s3:GetBucketLocation`?",
-                bucket.credentials().access_key
-            )
-        })?;
-
+    // Run pipeline
     let input = fs::read_dir("input")?;
     input
         .filter_map(|entry| {
@@ -159,13 +228,15 @@ fn main() -> Result<()> {
         .map(|s| {
             let deck = format::Deck::try_from(s.as_ref()).unwrap();
 
-            let mut artifacts: Vec<_> = TTS::build(&deck, &renderer)
+            let deck = TTS::build(&deck, &renderer)
                 .map(|e| e.unwrap())
-                .map(|artifact| exporter.export(artifact).unwrap())
-                .collect();
+                .map(|artifact| pngexporter.export(artifact).unwrap())
+                .map(|a| exporter.export(a).unwrap());
+
+            let mut deck: Vec<_> = deck.collect();
 
             // Make sure backs and fronts are next to one another
-            artifacts.sort_unstable_by(|a, b| match (a.amount, b.amount) {
+            deck.sort_unstable_by(|a, b| match (a.amount, b.amount) {
                 (Amount::Single, Amount::Single) => std::cmp::Ordering::Equal,
                 (Amount::Single, Amount::Multiple { .. }) => std::cmp::Ordering::Less,
                 (Amount::Multiple { .. }, Amount::Single) => std::cmp::Ordering::Greater,
@@ -173,122 +244,17 @@ fn main() -> Result<()> {
                     ia.cmp(&ib)
                 }
             });
-
-            artifacts
-        })
-        .map(|deck| {
-            deck.iter()
-                .map(|artifact| {
-                    let ulid = format!("{}.png", Ulid::new());
-                    bucket
-                        .put_object(ulid.clone(), &fs::read(artifact.data.clone()).unwrap())
-                        .unwrap();
-                    let artifact = artifact.clone();
-                    artifact.with_data(Path::new(&bucket.url()).join(ulid))
-                })
-                .collect::<Vec<_>>()
+            deck
         })
         .enumerate()
         .for_each(|(index, deck)| {
             if args.sync_to_tts {
                 let api = ExternalEditorApi::new();
-                spawn_deck(&api, &deck, (index as f32 * 2.4, 0.0, 0.0)).unwrap();
+                tts::spawn_deck(&api, &deck, (index as f32 * 2.4, 0.0, 0.0)).unwrap();
             }
         });
 
     info!("Done in {:?}", start.elapsed());
 
     Ok(())
-}
-
-fn spawn_deck(
-    api: &ExternalEditorApi,
-    deck: &[Artifact<PathBuf>],
-    position: (f32, f32, f32),
-) -> Result<(), Box<dyn Error>> {
-    if deck.is_empty() {
-        return Ok(());
-    }
-
-    let backs = deck
-        .iter()
-        .filter(|artifact| artifact.side == Side::Back)
-        .cycle();
-
-    for (front, back) in deck
-        .iter()
-        .filter(|artifact| artifact.side == Side::Front)
-        .zip(backs)
-    {
-        let _ = api.execute(spawn_card_or_deck_tts(
-            position,
-            &front.data,
-            &back.data,
-            front.content,
-            front.aspect_ratio.map_or(false, |a| a.is_landscape()),
-            true,
-        ))?;
-    }
-    Ok(())
-}
-
-fn spawn_card_or_deck_tts(
-    position: (f32, f32, f32),
-    face: &Path,
-    back: &Path,
-    content: Content,
-    sideways: bool,
-    back_is_hidden: bool,
-) -> String {
-    let mut face = face.display().to_string().replace('\\', "//");
-    if !face.starts_with("http") {
-        face = format!("file://{face}");
-    }
-    let mut back = back.display().to_string().replace('\\', "//");
-    if !back.starts_with("http") {
-        back = format!("file://{back}");
-    }
-
-    match content {
-        Content::Sheet {
-            columns,
-            rows,
-            total,
-        } => {
-            format!(
-                r#"spawnObject({{
-    type = "DeckCustom",
-    position = {{{}, {}, {}}},
-    snap_to_grid = true,
-    callback_function = function(spawned_object)
-        spawned_object.setCustomObject({{
-            face = "{face}",
-            back = "{back}",
-            width = {columns},
-            height = {rows},
-            number = {total},
-            sideways = {sideways},
-            back_is_hidden = {back_is_hidden},
-        }})
-    end
-}})"#,
-                position.0, position.1, position.2,
-            )
-        }
-        Content::Single => format!(
-            r#"spawnObject({{
-type = "CardCustom",
-position = {{{}, {}, {}}},
-snap_to_grid = true,
-callback_function = function(spawned_object)
-    spawned_object.setCustomObject({{
-        face = "{face}",
-        back = "{back}",
-        sideways = {sideways},
-    }})
-end
-}})"#,
-            position.0, position.1, position.2,
-        ),
-    }
 }
