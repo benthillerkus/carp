@@ -53,7 +53,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Output {
     /// Export the deck to a directory.
-    File {
+    Disk {
         #[arg(short, long, default_value = "export/")]
         directory: PathBuf,
     },
@@ -87,7 +87,7 @@ enum Output {
 
 impl Default for Output {
     fn default() -> Self {
-        Output::File {
+        Output::Disk {
             directory: PathBuf::from("export/"),
         }
     }
@@ -105,17 +105,21 @@ impl Export for S3Exporter {
         &self,
         artifact: Artifact<Self::Data>,
     ) -> std::result::Result<Artifact<Self::Output>, Box<dyn Error>> {
-        let ulid = format!("{}.png", Ulid::new());
-        self.bucket.put_object(ulid.clone(), &artifact.data)?;
+        let filename = if let Some(ref extension) = artifact.extension {
+            format!("{}.{extension}", Ulid::new())
+        } else {
+            Ulid::new().to_string()
+        };
+        self.bucket.put_object(filename.clone(), &artifact.data)?;
         let artifact = artifact.clone();
-        Ok(artifact.with_data(Path::new(&self.bucket.url()).join(ulid)))
+        Ok(artifact.with_data(Path::new(&self.bucket.url()).join(filename)))
     }
 }
 
 impl Output {
     fn exporter(self) -> Result<Box<dyn Export<Data = Vec<u8>, Output = PathBuf>>> {
         match self {
-            Output::File { mut directory } => {
+            Output::Disk { mut directory } => {
                 directory.push("nofile");
                 let directory = if directory.is_relative() {
                     std::env::current_dir()?.join(directory)

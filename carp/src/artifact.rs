@@ -44,6 +44,8 @@ pub struct Artifact<Format> {
     pub content: Content,
     pub amount: Amount,
     pub aspect_ratio: Option<AspectRatio>,
+    /// The file extension commonly associated with [Format].
+    pub extension: Option<String>,
 }
 
 impl<Format> Display for Artifact<Format> {
@@ -66,6 +68,7 @@ impl<Format> Artifact<Format> {
             shared: self.shared,
             deck: self.deck,
             aspect_ratio: self.aspect_ratio,
+            extension: self.extension,
         }
     }
 
@@ -80,6 +83,7 @@ impl<Format> Artifact<Format> {
                 shared: self.shared,
                 deck: self.deck,
                 aspect_ratio: self.aspect_ratio,
+                extension: self.extension,
             },
         )
     }

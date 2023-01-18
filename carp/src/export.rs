@@ -40,10 +40,11 @@ impl Export for FileExporter {
             fs::create_dir_all(parent)?;
         }
 
-        let path = self
-            .directory
-            .with_file_name(artifact.to_string())
-            .with_extension("png"); // TODO Make this configurable
+        let mut path = self.directory.with_file_name(artifact.to_string());
+
+        if let Some(ref fileformat) = artifact.extension {
+            path = path.with_extension(fileformat);
+        }
 
         let mut writer = File::create(&path)?;
 
@@ -89,6 +90,7 @@ impl Export for PNGExporter {
 
         Ok(Artifact {
             aspect_ratio,
+            extension: Some("png".into()),
             ..artifact.with_data(buf)
         })
     }

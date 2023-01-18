@@ -42,6 +42,7 @@ impl TTS {
                         content: Content::Single,
                         amount: Amount::Single,
                         aspect_ratio: Default::default(),
+                        extension: Default::default(),
                     })
             }))
         } else {
@@ -97,6 +98,7 @@ impl TTS {
                                 }
                             }
                         },
+                        extension: Default::default(),
                     })
             })
     }
