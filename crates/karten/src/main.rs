@@ -1,23 +1,18 @@
 use carp::{
-    artifact::{Amount, Artifact},
+    artifact::Amount,
     dimensions::{AspectRatio, Dimensions},
-    export::{Export, FileExporter, PNGExporter},
+    export::{Export, PNGExporter},
     renderer::ImageRenderer,
     tts::TTS,
     BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
 use clap::{Parser, Subcommand};
-use color_eyre::{eyre::Context, Help, Result};
+use color_eyre::Result;
 use dotenvy::dotenv;
 use log::info;
-use s3::{creds::Credentials, Bucket, Region};
-use std::{error::Error, path::PathBuf, str::FromStr};
-use std::{
-    fs::{self},
-    path::Path,
-};
+use std::fs::{self};
+use std::path::PathBuf;
 use tts_external_api::ExternalEditorApi;
-use ulid::Ulid;
 
 mod deck;
 mod format;
@@ -85,111 +80,8 @@ enum Output {
     },
 }
 
-impl Default for Output {
-    fn default() -> Self {
-        Output::Disk {
-            directory: PathBuf::from("export/"),
-        }
-    }
-}
-
-struct S3Exporter {
-    pub bucket: Bucket,
-}
-
-impl Export for S3Exporter {
-    type Data = Vec<u8>;
-    type Output = PathBuf;
-
-    fn export(
-        &self,
-        artifact: Artifact<Self::Data>,
-    ) -> std::result::Result<Artifact<Self::Output>, Box<dyn Error>> {
-        let filename = if let Some(ref extension) = artifact.extension {
-            format!("{}.{extension}", Ulid::new())
-        } else {
-            Ulid::new().to_string()
-        };
-        self.bucket.put_object(filename.clone(), &artifact.data)?;
-        let artifact = artifact.clone();
-        Ok(artifact.with_data(Path::new(&self.bucket.url()).join(filename)))
-    }
-}
-
-impl Output {
-    fn exporter(self) -> Result<Box<dyn Export<Data = Vec<u8>, Output = PathBuf>>> {
-        match self {
-            Output::Disk { mut directory } => {
-                directory.push("nofile");
-                let directory = if directory.is_relative() {
-                    std::env::current_dir()?.join(directory)
-                } else {
-                    directory
-                };
-
-                Ok(Box::new(FileExporter { directory }))
-            }
-            Output::S3 {
-                s3_bucket,
-                s3_region,
-                s3_endpoint,
-                s3_path_style,
-            } => {
-                let bucket = Bucket::new(
-                    &s3_bucket,
-                    if let Some(endpoint) = s3_endpoint {
-                        Region::Custom {
-                            region: s3_region,
-                            endpoint,
-                        }
-                    } else {
-                        Region::from_str(&s3_region).with_context(|| {
-                            format!("couldn't parse a S3 Region from {}", s3_region)
-                        })?
-                    },
-                    Credentials::from_env()
-                        .with_context(|| "couldn't build credentials from env vars")?,
-                )?;
-
-                let bucket = if s3_path_style {
-                    bucket.with_path_style()
-                } else {
-                    bucket
-                };
-
-                bucket
-                    .location()
-                    .with_context(|| format!("couldn't get bucket location: {}", bucket.host()))
-                    .with_suggestion(|| {
-                        format!("does {} exist in {}?", bucket.host(), bucket.region,)
-                    })
-                    .with_suggestion(|| {
-                        format!(
-                            "the bucket is configured with {}. Maybe {} would work?",
-                            if bucket.is_path_style() {
-                                "path style"
-                            } else {
-                                "subdomain style"
-                            },
-                            if bucket.is_path_style() {
-                                "subdomain style"
-                            } else {
-                                "path style"
-                            },
-                        )
-                    })
-                    .with_suggestion(|| {
-                        format!(
-                            "does {:?} have the permission `s3:GetBucketLocation`?",
-                            bucket.credentials().access_key
-                        )
-                    })?;
-
-                Ok(Box::new(S3Exporter { bucket }))
-            }
-        }
-    }
-}
+// Impls for Output
+mod output;
 
 fn main() -> Result<()> {
     let start = std::time::Instant::now();

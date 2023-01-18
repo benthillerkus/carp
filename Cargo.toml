@@ -1,8 +1,5 @@
 [workspace]
-members = [
-  "karten",
-  "carp"
-]
+members = ["crates/*"]
 
 [workspace.package]
 edition = "2021"
@@ -10,10 +7,14 @@ authors = ["Bent Hillerkus"]
 repository = "https://github.com/benthillerkus/karten"
 
 [workspace.dependencies]
-carp = { path = "carp" }
-karten = { path = "karten" }
+carp = { path = "crates/carp" }
+carp-export-s3 = { path = "crates/s3" }
+karten = { path = "crates/karten" }
 log = "0.4.17"
 piet-common = "0.6.0"
+rust-s3 = { version = "0.32.3", default-features = false, features = [
+  "sync-rustls-tls",
+] }
 
 [profile.dev.package]
 mtpng = { opt-level = 3 }

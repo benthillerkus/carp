@@ -1,0 +1,11 @@
+[package]
+name = "carp-export-s3"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+rust-s3 = { workspace = true }
+carp = { workspace = true }
+ulid = "1.0.0"
