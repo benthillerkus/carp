@@ -64,7 +64,11 @@ pub enum Markup<'a> {
     Plain(Cow<'a, str>),
     Blank,
     Italic(Content<'a>),
-    Font(Cow<'a, str>, Content<'a>),
+    Font {
+        family: Option<Cow<'a, str>>,
+        size: Option<f64>,
+        content: Content<'a>,
+    },
     Tiny(Content<'a>),
     Bottom(Content<'a>),
     Unknown {
@@ -83,7 +87,7 @@ impl Markup<'_> {
             Markup::Italic(content) | Markup::Tiny(content) => content.is_empty(),
             Markup::Bottom(content) => content.is_empty(),
             Markup::Unknown { content, .. } => content.is_empty(),
-            Markup::Font(_, content) => content.is_empty(),
+            Markup::Font { content, .. } => content.is_empty(),
         }
     }
 
@@ -157,7 +161,7 @@ impl Display for Markup<'_> {
                 }
                 write!(f, "</{}>", tag)
             }
-            Markup::Font(_, content) => {
+            Markup::Font { content, .. } => {
                 for markup in content {
                     write!(f, "{}", markup)?;
                 }
@@ -213,11 +217,20 @@ impl Card<'_> {
                 let end = render.len();
                 annotations.push((start..end).annotate_with(Style::Italic));
             }
-            Markup::Font(family, content) => {
+            Markup::Font {
+                family,
+                size,
+                content,
+            } => {
                 let start = render.len();
                 Card::styled_segments(content, render, annotations);
                 let end = render.len();
-                annotations.push((start..end).annotate_with(Style::Font(family.to_string())));
+                if let Some(family) = family {
+                    annotations.push((start..end).annotate_with(Style::Font(family.to_string())));
+                }
+                if let Some(size) = size {
+                    annotations.push((start..end).annotate_with(Style::Size(*size)));
+                }
             }
             Markup::Tiny(content) => {
                 let start = render.len();

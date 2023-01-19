@@ -49,8 +49,8 @@ impl<'a> CardTrait for Card<'a> {
                                 TextAttribute::Style(FontStyle::Italic),
                             )
                         }
-                        Style::Font(font) => {
-                            if let Some(font) = ctx.text().font_family(&font) {
+                        Style::Font(family) => {
+                            if let Some(font) = ctx.text().font_family(&family) {
                                 text = text.range_attribute(
                                     annotation.range.clone(),
                                     TextAttribute::FontFamily(font),

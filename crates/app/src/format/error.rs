@@ -13,7 +13,6 @@ pub enum ErrorKind {
         value: String,
         allowed: &'static [&'static str],
     },
-    MissingFontFamily,
     Parse,
 }
 
@@ -80,12 +79,6 @@ impl std::fmt::Display for ErrorKind {
                 f,
                 r#"invalid value for attribute: <{tag} ... {attribute}="{value}" ... />, allowed values are {allowed:?}"#
             ),
-            Self::MissingFontFamily => {
-                write!(
-                    f,
-                    r#"the font tag is missing the family attribute like <font family="serif">...</font>"#
-                )
-            }
         }
     }
 }

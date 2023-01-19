@@ -143,11 +143,13 @@ impl<'a> TryFrom<Node<'_, 'a>> for Markup<'a> {
                 result
             })),
             "font" => {
-                let family = Cow::Owned(
-                    node.attribute("family")
-                        .ok_or(ErrorKind::MissingFontFamily)?
-                        .to_string(),
-                );
+                let family = node
+                    .attribute("family")
+                    .map(|fam| Cow::Owned(fam.to_string()));
+
+                let size = node
+                    .attribute("size")
+                    .map(|size| size.trim().parse::<f64>().unwrap_or(1.0));
 
                 let content = {
                     let mut result = Vec::new();
@@ -158,7 +160,11 @@ impl<'a> TryFrom<Node<'_, 'a>> for Markup<'a> {
                     result
                 };
 
-                Ok(Self::Font(family, content))
+                Ok(Self::Font {
+                    family,
+                    size,
+                    content,
+                })
             }
             unknown => Ok(Self::Unknown {
                 tag: Cow::Owned(unknown.to_owned()),
