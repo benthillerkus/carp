@@ -91,7 +91,14 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
         } else {
             Ok(Self {
                 content: {
-                    let mut content: VecDeque<Markup> = node.children().map(Markup::from).collect();
+                    let mut content: VecDeque<Markup> = {
+                        let mut result = VecDeque::new();
+
+                        for child in node.children() {
+                            result.push_back(Markup::try_from(child)?);
+                        }
+                        result
+                    };
 
                     // Remove leading and trailing blank lines at the start and end of a card
                     if let Some(mut first) = content.pop_front() {
@@ -140,18 +147,80 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
     }
 }
 
-impl<'a> From<Node<'_, 'a>> for Markup<'a> {
-    fn from(node: Node<'_, 'a>) -> Self {
+impl<'a> TryFrom<Node<'_, 'a>> for Markup<'a> {
+    type Error = Error;
+
+    fn try_from(node: Node<'_, 'a>) -> Result<Self, Error> {
         if node.is_text() {
-            return Self::Plain(Cow::Owned(node.text().unwrap_or("").to_owned()));
+            return Ok(Self::Plain(Cow::Owned(
+                node.text().unwrap_or("").to_owned(),
+            )));
         }
         match node.tag_name().name() {
-            "blank" => Self::Blank,
-            "italic" | "i" => Self::Italic(node.children().map(Markup::from).collect()),
-            unknown => Self::Unknown {
+            "blank" => Ok(Self::Blank),
+            "br" => Ok(Self::Plain("\n".into())),
+            "italic" | "i" => Ok(Self::Italic({
+                let mut result = Vec::new();
+
+                for child in node.children() {
+                    result.push(Markup::try_from(child)?);
+                }
+                result
+            })),
+            "tiny" => Ok(Self::Tiny({
+                let mut result = Vec::new();
+
+                for child in node.children() {
+                    result.push(Markup::try_from(child)?);
+                }
+                result
+            })),
+            "bottom" => Ok(Self::Bottom({
+                let mut result = Vec::new();
+
+                for child in node.children() {
+                    result.push(Markup::try_from(child)?);
+                }
+                result
+            })),
+            "font" => {
+                let family = Cow::Owned(
+                    node.attribute("family")
+                        .ok_or(ErrorKind::MissingFontFamily)?
+                        .to_string(),
+                );
+
+                let content = {
+                    let mut result = Vec::new();
+
+                    for child in node.children() {
+                        result.push(Markup::try_from(child)?);
+                    }
+                    result
+                };
+
+                Ok(Self::Font(family, content))
+            }
+            unknown => Ok(Self::Unknown {
                 tag: Cow::Owned(unknown.to_owned()),
-                content: node.children().map(Markup::from).collect(),
-            },
+                attributes: node
+                    .attributes()
+                    .map(|attr| {
+                        (
+                            Cow::Owned(attr.name().to_owned()),
+                            Cow::Owned(attr.value().to_owned()),
+                        )
+                    })
+                    .collect(),
+                content: {
+                    let mut result = Vec::new();
+
+                    for child in node.children() {
+                        result.push(Markup::try_from(child)?);
+                    }
+                    result
+                },
+            }),
         }
     }
 }
@@ -215,5 +284,16 @@ mod tests {
             .unwrap();
 
         assert_eq!(format!("{}", deck.cards[0]), "Hallo!!!!!____");
+    }
+
+    #[test]
+    fn bottom() {
+        let deck: Deck = r#"<deck name="hi"><card>
+        Hallo!!!!!<blank/><bottom>ASDF</bottom>
+        </card></deck>"#
+            .try_into()
+            .unwrap();
+
+        assert_eq!(format!("{}", deck.cards[0]), "Hallo!!!!!____\n\nASDF");
     }
 }

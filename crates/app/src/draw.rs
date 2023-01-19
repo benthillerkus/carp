@@ -2,11 +2,12 @@ use carp::{dimensions::Dimensions, Card as CardTrait};
 use piet_common::{kurbo::Point, *};
 
 use crate::{
-    format::{self, Card, Deck, StyleAnnotation},
+    format::{self, Card, Deck, Style},
     theme::Theme,
 };
 
-const SHY: char = '\u{AD}';
+mod break_shy;
+use break_shy::BreakShyWithDash;
 
 impl<'a> CardTrait for Card<'a> {
     type Deck = Deck<'a>;
@@ -28,51 +29,78 @@ impl<'a> CardTrait for Card<'a> {
 
         ctx.fill(area, &theme.background);
 
-        let (source, annotations) = self.styled_segments();
+        let (source, annotations) = self.annotated_top();
+
+        let source = dbg!(source);
+        dbg!(self.to_string());
 
         let mut text = ctx
-            .text()
             .new_text_layout(source)
             .font(theme.font.to_owned(), theme.text_size)
             .alignment(TextAlignment::Start)
             .text_color(theme.color)
             .max_width(area.width() - border.x * 2.0);
 
-        let dash = ctx
-            .text()
-            .new_text_layout("-")
-            .font(theme.font.to_owned(), theme.text_size)
-            .alignment(TextAlignment::Start)
-            .text_color(theme.color)
-            .max_width(f64::INFINITY)
-            .build()
-            .unwrap();
-
         for annotation in annotations {
-            match annotation {
-                StyleAnnotation::Italic(range) => {
-                    text = text.range_attribute(range, TextAttribute::Style(FontStyle::Italic))
+            match annotation.style {
+                Style::Italic => {
+                    text = text
+                        .range_attribute(annotation.range, TextAttribute::Style(FontStyle::Italic))
+                }
+                Style::Font(font) => {
+                    if let Some(font) = ctx.text().font_family(&font) {
+                        text =
+                            text.range_attribute(annotation.range, TextAttribute::FontFamily(font))
+                    }
+                }
+                Style::Size(factor) => {
+                    text = text.range_attribute(
+                        annotation.range,
+                        TextAttribute::FontSize(theme.text_size * factor),
+                    )
                 }
             }
         }
 
         let text = text.build().unwrap();
 
-        // Place a dash at the end of each line that ends with a SHY character.
-        let mut line_number = 0;
-        while let (Some(line), Some(metric)) =
-            (text.line_text(line_number), text.line_metric(line_number))
-        {
-            if let Some(last) = line.as_bytes().last() {
-                if *last == SHY as u8 {
-                    let hit = text.hit_test_text_position(metric.end_offset - 2);
-                    ctx.draw_text(&dash, hit.point + (border.x, border.y - metric.baseline));
-                }
-                line_number += 1;
-            }
-        }
+        ctx.draw_breaking_text(&text, border);
 
-        ctx.draw_text(&text, border);
+        if let Some((source, annotations)) = self.annotated_bottom() {
+            let mut text = ctx
+                .new_text_layout(source)
+                .font(theme.font.to_owned(), theme.text_size)
+                .alignment(TextAlignment::Start)
+                .text_color(theme.color)
+                .max_width(area.width() - border.x * 2.0);
+
+            for annotation in annotations {
+                match annotation.style {
+                    Style::Italic => {
+                        text = text.range_attribute(
+                            annotation.range,
+                            TextAttribute::Style(FontStyle::Italic),
+                        )
+                    }
+                    Style::Font(font) => {
+                        if let Some(font) = ctx.text().font_family(&font) {
+                            text = text
+                                .range_attribute(annotation.range, TextAttribute::FontFamily(font))
+                        }
+                    }
+                    Style::Size(factor) => {
+                        text = text.range_attribute(
+                            annotation.range,
+                            TextAttribute::FontSize(theme.text_size * factor),
+                        )
+                    }
+                }
+            }
+
+            let text = text.build().unwrap();
+
+            ctx.draw_breaking_text(&text, border);
+        }
 
         let number = ctx
             .text()

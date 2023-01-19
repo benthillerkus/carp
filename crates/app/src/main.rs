@@ -1,87 +1,23 @@
 use carp::{
     artifact::Amount,
-    dimensions::{AspectRatio, Dimensions},
+    dimensions::Dimensions,
     export::{Export, PNGExporter},
     renderer::ImageRenderer,
     tts::TTS,
-    BASE_ASPECT_RATIO, BASE_RESOLUTION,
 };
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use color_eyre::Result;
 use dotenvy::dotenv;
 use log::info;
 use std::fs::{self};
-use std::path::PathBuf;
 use tts_external_api::ExternalEditorApi;
 
+mod cli;
 mod deck;
+mod draw;
 mod format;
-mod karte;
 mod theme;
 mod tts;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-struct Args {
-    #[command(subcommand)]
-    output: Output,
-
-    /// The aspect ratio of a single card.
-    ///
-    /// The aspect ratio is defined as width / height.
-    /// 1.0 is square, 2.0 is twice as wide as it is tall, etc.
-    /// The default is the 5/7.2 ratio prefered by Tabletop Simulator.
-    #[arg(short, long, default_value_t = BASE_ASPECT_RATIO)]
-    aspect_ratio: AspectRatio,
-
-    /// The image resolution for the deck.
-    /// On non-square aspect ratios, this value determines the longer side,
-    /// so the image can never be larger than resolution².
-    #[arg(short, long, default_value_t = BASE_RESOLUTION)]
-    resolution: u32,
-
-    /// Whether to sync the deck into the Tabletop Simulator.
-    #[arg(short, long, default_value_t = false)]
-    sync_to_tts: bool,
-}
-
-#[derive(Subcommand, Debug)]
-enum Output {
-    /// Export the deck to a directory.
-    Disk {
-        #[arg(short, long, default_value = "export/")]
-        directory: PathBuf,
-    },
-    /// Upload the deck into an S3 (compatible) bucket.
-    S3 {
-        /// The name of the S3 bucket to export to.
-        ///
-        /// The bucket must exist and you must have the folliwng permissions:
-        /// - `s3:GetBucketLocation`
-        /// - `s3:PutObject`
-        ///
-        /// Credentials are read from the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-        #[arg(long, env)]
-        s3_bucket: String,
-
-        #[arg(long, env)]
-        s3_region: String,
-
-        /// The S3 endpoint to use. If not set, the default endpoint for the region is used.
-        /// In Minio this setting is called "Server Location".
-        #[arg(long, env)]
-        s3_endpoint: Option<String>,
-
-        /// Whether to use the path style or the subdomain style for S3 URLs.
-        ///
-        /// Minio uses the path style per default, AWS uses the subdomain style.
-        #[arg(long, env, default_value_t = false)]
-        s3_path_style: bool,
-    },
-}
-
-// Impls for Output
-mod output;
 
 fn main() -> Result<()> {
     let start = std::time::Instant::now();
@@ -96,10 +32,10 @@ fn main() -> Result<()> {
         .install()?;
     dotenv()?;
     env_logger::init();
-    let args = Args::parse();
+    let args = cli::Args::parse();
 
     // Configure pipeline
-    let exporter = args.output.exporter()?;
+    let exporter = args.output.unwrap_or_default().exporter()?;
     let dimensions = Dimensions::new(args.resolution, args.aspect_ratio);
     let renderer = ImageRenderer::new(dimensions);
     let pngexporter = PNGExporter;
@@ -150,7 +86,7 @@ fn main() -> Result<()> {
             }
         });
 
-    info!("Done in {:?}", start.elapsed());
+    info!("Done in {:.2?}", start.elapsed());
 
     Ok(())
 }
