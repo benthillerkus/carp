@@ -3,7 +3,7 @@ use super::{
     *,
 };
 use roxmltree::{Document, Node};
-use std::{borrow::Cow, collections::VecDeque};
+use std::borrow::Cow;
 
 impl<'a> TryFrom<&'a str> for Deck<'a> {
     type Error = Error;
@@ -89,60 +89,19 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
                 actual: node.tag_name().name().to_owned(),
             }))
         } else {
-            Ok(Self {
+            let mut result = Self {
                 content: {
-                    let mut content: VecDeque<Markup> = {
-                        let mut result = VecDeque::new();
+                    let mut result = Vec::new();
 
-                        for child in node.children() {
-                            result.push_back(Markup::try_from(child)?);
-                        }
-                        result
-                    };
-
-                    // Remove leading and trailing blank lines at the start and end of a card
-                    if let Some(mut first) = content.pop_front() {
-                        match first {
-                            Markup::Plain(Cow::Borrowed(ref mut b)) => {
-                                *b = b.trim_start();
-                                if b.is_empty() {
-                                    content.push_front(first)
-                                }
-                            }
-                            Markup::Plain(Cow::Owned(ref mut s)) => {
-                                let initial = s.len();
-                                if initial > 0 {
-                                    s.drain(0..(initial - s.trim_start().len()));
-                                    content.push_front(first)
-                                }
-                            }
-                            _ => content.push_front(first),
-                        }
-                    }
-                    if let Some(mut first) = content.pop_back() {
-                        match first {
-                            Markup::Plain(Cow::Borrowed(ref mut b)) => {
-                                *b = b.trim_end();
-                                if b.is_empty() {
-                                    content.push_back(first)
-                                }
-                            }
-                            Markup::Plain(Cow::Owned(ref mut s)) => {
-                                let initial = s.len();
-                                if initial > 0 {
-                                    for _ in 0..(initial - s.trim_end().len()) {
-                                        s.pop();
-                                    }
-                                    content.push_back(first)
-                                }
-                            }
-                            _ => content.push_back(first),
-                        }
+                    for child in node.children() {
+                        result.push(Markup::try_from(child)?);
                     }
 
-                    content.into()
+                    result
                 },
-            })
+            };
+            result.cleanup();
+            Ok(result)
         }
     }
 }

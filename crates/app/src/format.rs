@@ -27,6 +27,29 @@ pub struct Card<'a> {
     pub content: Content<'a>,
 }
 
+impl Card<'_> {
+    pub fn cleanup(&mut self) {
+        let _ = self
+            .content
+            .first_mut()
+            .map(|markup| markup.trim_start())
+            .is_some();
+        let _ = self
+            .content
+            .last_mut()
+            .map(|markup| markup.trim_end())
+            .is_some();
+        self.content.iter_mut().for_each(|markup| {
+            if let Markup::Bottom(c) = markup {
+                let _ = c.first_mut().map(|markup| markup.trim_start()).is_some();
+                let _ = c.last_mut().map(|markup| markup.trim_end()).is_some();
+            }
+        });
+
+        self.content.retain(|markup| !markup.is_empty());
+    }
+}
+
 impl Display for Card<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for markup in &self.content {
@@ -49,6 +72,52 @@ pub enum Markup<'a> {
         attributes: Vec<(Cow<'a, str>, Cow<'a, str>)>,
         content: Content<'a>,
     },
+}
+
+impl Markup<'_> {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Markup::Plain(Cow::Borrowed(b)) => b.is_empty(),
+            Markup::Plain(Cow::Owned(s)) => s.is_empty(),
+            Markup::Blank => false,
+            Markup::Italic(content) | Markup::Tiny(content) => content.is_empty(),
+            Markup::Bottom(content) => content.is_empty(),
+            Markup::Unknown { content, .. } => content.is_empty(),
+            Markup::Font(_, content) => content.is_empty(),
+        }
+    }
+
+    pub fn trim_start(&mut self) {
+        match self {
+            Markup::Plain(Cow::Borrowed(ref mut b)) => {
+                *b = b.trim_start();
+            }
+            Markup::Plain(Cow::Owned(ref mut s)) => {
+                let initial = s.len();
+                if initial > 0 {
+                    s.drain(0..(initial - s.trim_start().len()));
+                }
+            }
+            _ => (),
+        }
+    }
+
+    pub fn trim_end(&mut self) {
+        match self {
+            Markup::Plain(Cow::Borrowed(ref mut b)) => {
+                *b = b.trim_end();
+            }
+            Markup::Plain(Cow::Owned(ref mut s)) => {
+                let initial = s.len();
+                if initial > 0 {
+                    for _ in 0..(initial - s.trim_end().len()) {
+                        s.pop();
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
 }
 
 impl Display for Markup<'_> {
