@@ -68,7 +68,6 @@ impl<'a> CardTrait for Card<'a> {
                 .new_text_layout(source)
                 .font(theme.font.to_owned(), theme.text_size)
                 .alignment(TextAlignment::Start)
-                .default_attribute(TextAttribute::FontSize(theme.text_size / 2.0))
                 .text_color(theme.color)
                 .max_width(area.width() - border.x * 2.0);
 

@@ -30,7 +30,9 @@ impl<T: RenderContext> BreakShyWithDash for T {
             .map(|_| Some(self.text().new_text_layout("-")))
             .collect();
 
-        BreakingTextLayoutBuilder::new(self.text().new_text_layout(text), dashes)
+        let text_length = text.as_str().len();
+
+        BreakingTextLayoutBuilder::new(self.text().new_text_layout(text), text_length, dashes)
     }
 
     fn draw_breaking_text(
@@ -49,6 +51,7 @@ impl<T: RenderContext> BreakShyWithDash for T {
 }
 
 pub struct BreakingTextLayoutBuilder<T: TextLayoutBuilder> {
+    text_length: usize,
     inner: T,
     dashes: Vec<Option<T>>,
     default_attributes: Vec<TextAttribute>,
@@ -56,12 +59,13 @@ pub struct BreakingTextLayoutBuilder<T: TextLayoutBuilder> {
 }
 
 impl<T: TextLayoutBuilder> BreakingTextLayoutBuilder<T> {
-    fn new(inner: T, dashes: Vec<Option<T>>) -> Self {
+    fn new(inner: T, text_length: usize, dashes: Vec<Option<T>>) -> Self {
         Self {
             inner,
             dashes,
             default_attributes: Vec::new(),
             attributes: Vec::new(),
+            text_length,
         }
     }
 }
@@ -143,9 +147,26 @@ impl<T: TextLayoutBuilder> TextLayoutBuilder for BreakingTextLayoutBuilder<T> {
         range: impl std::ops::RangeBounds<usize>,
         attribute: impl Into<TextAttribute>,
     ) -> Self {
-        Self {
-            inner: self.inner.range_attribute(range, attribute),
-            ..self
+        let start_ok = match range.start_bound() {
+            std::ops::Bound::Included(0) => true,
+            std::ops::Bound::Unbounded => true,
+            _ => false,
+        };
+
+        let end_ok = match range.end_bound() {
+            std::ops::Bound::Included(b) if (*b - 1) >= self.text_length => true,
+            std::ops::Bound::Excluded(b) if *b >= self.text_length => true,
+            std::ops::Bound::Unbounded => true,
+            _ => false,
+        };
+
+        if start_ok && end_ok {
+            self.default_attribute(attribute)
+        } else {
+            Self {
+                inner: self.inner.range_attribute(range, attribute),
+                ..self
+            }
         }
     }
 
