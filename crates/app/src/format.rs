@@ -82,6 +82,7 @@ impl Display for Markup<'_> {
                 for (key, value) in attributes {
                     write!(f, r#" {key}="{value}""#)?;
                 }
+                write!(f, ">")?;
                 for markup in content {
                     write!(f, "{}", markup)?;
                 }
@@ -106,6 +107,8 @@ impl Card<'_> {
 
         Card::styled_segments(&self.content, &mut render, &mut annotations);
 
+        annotations.sort();
+
         (render, annotations)
     }
 
@@ -115,9 +118,13 @@ impl Card<'_> {
 
         if let Some(Markup::Bottom(content)) = self.content.last() {
             Card::styled_segments(content, &mut render, &mut annotations);
-        }
 
-        Some((render, annotations))
+            annotations.sort();
+
+            Some((render, annotations))
+        } else {
+            None
+        }
     }
 
     fn styled_segments(
@@ -179,6 +186,26 @@ pub struct StyleAnnotation {
     pub style: Style,
 }
 
+impl PartialOrd for StyleAnnotation {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for StyleAnnotation {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let starts = self.range.start.cmp(&other.range.start);
+
+        if starts == std::cmp::Ordering::Equal {
+            self.range.end.cmp(&other.range.end)
+        } else {
+            starts
+        }
+    }
+}
+
+impl Eq for StyleAnnotation {}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -189,31 +216,65 @@ mod test {
             content: vec![
                 Markup::Plain("Hello".into()),
                 Markup::Blank,
-                Markup::Italic(vec![Markup::Plain("World".into())]),
+                Markup::Italic(vec![
+                    Markup::Plain("World".into()),
+                    Markup::Tiny(vec![
+                        Markup::Plain("!".into()),
+                        Markup::Italic(vec![Markup::Plain(" Italic inside Tiny ".into())]),
+                    ]),
+                ]),
+                Markup::Blank,
+                Markup::Italic(vec![Markup::Plain("Italic".into())]),
+                Markup::Bottom(vec![Markup::Plain("Bottom".into())]),
             ],
         };
 
         let (render, annotations) = card.annotated_top();
 
-        assert_eq!(render, "Hello____World");
+        assert_eq!(render, "Hello____World! Italic inside Tiny ____Italic");
         assert_eq!(&"Hello____World"[9..14], "World");
-        assert_eq!(annotations, vec![(9..14).annotate_with(Style::Italic)]);
+        assert_eq!(
+            annotations,
+            vec![
+                (9..35).annotate_with(Style::Italic),
+                (14..35).annotate_with(Style::Size(0.5)),
+                (15..35).annotate_with(Style::Italic),
+                (39..45).annotate_with(Style::Italic)
+            ]
+        );
+
+        let (render, annotations) = card.annotated_bottom().unwrap();
+
+        assert_eq!(render, "Bottom");
+        assert_eq!(annotations, vec![]);
     }
 
     #[test]
     fn styled_segments2() {
         let card = Card {
             content: vec![
-                Markup::Plain("Hello".into()),
-                Markup::Bottom(vec![Markup::Tiny(vec![Markup::Plain("There".into())])]),
+                Markup::Plain("Glück".into()),
+                Markup::Bottom(vec![Markup::Tiny(vec![
+                    Markup::Plain("Auf der ".into()),
+                    Markup::Italic(vec![
+                        Markup::Plain("Steiger".into()),
+                        Markup::Plain(" kommt".into()),
+                    ]),
+                ])]),
             ],
         };
 
         let (render, _) = card.annotated_top();
-        assert_eq!(render, "Hello");
+        assert_eq!(render, "Glück");
 
         let (render, annotations) = card.annotated_bottom().unwrap();
-        assert_eq!(render, "There");
-        assert_eq!(annotations, vec![(0..5).annotate_with(Style::Size(0.5))]);
+        assert_eq!(render, "Auf der Steiger kommt");
+        assert_eq!(
+            annotations,
+            vec![
+                (0..21).annotate_with(Style::Size(0.5)),
+                (8..21).annotate_with(Style::Italic)
+            ]
+        );
     }
 }

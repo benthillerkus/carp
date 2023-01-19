@@ -31,9 +31,6 @@ impl<'a> CardTrait for Card<'a> {
 
         let (source, annotations) = self.annotated_top();
 
-        let source = dbg!(source);
-        dbg!(self.to_string());
-
         let mut text = ctx
             .new_text_layout(source)
             .font(theme.font.to_owned(), theme.text_size)
@@ -71,6 +68,7 @@ impl<'a> CardTrait for Card<'a> {
                 .new_text_layout(source)
                 .font(theme.font.to_owned(), theme.text_size)
                 .alignment(TextAlignment::Start)
+                .default_attribute(TextAttribute::FontSize(theme.text_size / 2.0))
                 .text_color(theme.color)
                 .max_width(area.width() - border.x * 2.0);
 
@@ -99,7 +97,13 @@ impl<'a> CardTrait for Card<'a> {
 
             let text = text.build().unwrap();
 
-            ctx.draw_breaking_text(&text, border);
+            ctx.draw_breaking_text(
+                &text,
+                (
+                    border.x,
+                    dimensions.card.height - border.y - text.image_bounds().height(),
+                ),
+            );
         }
 
         let number = ctx

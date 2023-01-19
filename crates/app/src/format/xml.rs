@@ -289,11 +289,11 @@ mod tests {
     #[test]
     fn bottom() {
         let deck: Deck = r#"<deck name="hi"><card>
-        Hallo!!!!!<blank/><bottom>ASDF</bottom>
+        ÖÖÖÖÖÖÖÄ???ASD<blank/><bottom>ASDF</bottom>
         </card></deck>"#
             .try_into()
             .unwrap();
 
-        assert_eq!(format!("{}", deck.cards[0]), "Hallo!!!!!____\n\nASDF");
+        assert_eq!(format!("{}", deck.cards[0]), "ÖÖÖÖÖÖÖÄ???ASD____\n\nASDF");
     }
 }
