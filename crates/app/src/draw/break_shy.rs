@@ -134,7 +134,7 @@ impl<T: TextLayoutBuilder> TextLayoutBuilder for BreakingTextLayoutBuilder<T> {
     fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
         let attribute = attribute.into();
 
-        self.attributes.push((0..usize::MAX, attribute.clone()));
+        self.default_attributes.push(attribute.clone());
 
         Self {
             inner: self.inner.default_attribute(attribute),

@@ -29,73 +29,50 @@ impl<'a> CardTrait for Card<'a> {
 
         ctx.fill(area, &theme.background);
 
-        let (source, annotations) = self.annotated_top();
+        let texts: Vec<_> = vec![Some(self.annotated_top()), self.annotated_bottom()]
+            .iter()
+            .filter_map(|e| e.as_ref())
+            .fuse()
+            .map(|(source, annotations)| {
+                let mut text = ctx
+                    .new_text_layout(source.to_owned())
+                    .font(theme.font.to_owned(), theme.text_size)
+                    .alignment(TextAlignment::Start)
+                    .text_color(theme.color)
+                    .max_width(area.width() - border.x * 2.0);
 
-        let mut text = ctx
-            .new_text_layout(source)
-            .font(theme.font.to_owned(), theme.text_size)
-            .alignment(TextAlignment::Start)
-            .text_color(theme.color)
-            .max_width(area.width() - border.x * 2.0);
-
-        for annotation in annotations {
-            match annotation.style {
-                Style::Italic => {
-                    text = text
-                        .range_attribute(annotation.range, TextAttribute::Style(FontStyle::Italic))
-                }
-                Style::Font(font) => {
-                    if let Some(font) = ctx.text().font_family(&font) {
-                        text =
-                            text.range_attribute(annotation.range, TextAttribute::FontFamily(font))
-                    }
-                }
-                Style::Size(factor) => {
-                    text = text.range_attribute(
-                        annotation.range,
-                        TextAttribute::FontSize(theme.text_size * factor),
-                    )
-                }
-            }
-        }
-
-        let text = text.build().unwrap();
-
-        ctx.draw_breaking_text(&text, border);
-
-        if let Some((source, annotations)) = self.annotated_bottom() {
-            let mut text = ctx
-                .new_text_layout(source)
-                .font(theme.font.to_owned(), theme.text_size)
-                .alignment(TextAlignment::Start)
-                .text_color(theme.color)
-                .max_width(area.width() - border.x * 2.0);
-
-            for annotation in annotations {
-                match annotation.style {
-                    Style::Italic => {
-                        text = text.range_attribute(
-                            annotation.range,
-                            TextAttribute::Style(FontStyle::Italic),
-                        )
-                    }
-                    Style::Font(font) => {
-                        if let Some(font) = ctx.text().font_family(&font) {
-                            text = text
-                                .range_attribute(annotation.range, TextAttribute::FontFamily(font))
+                for annotation in annotations {
+                    match &annotation.style {
+                        Style::Italic => {
+                            text = text.range_attribute(
+                                annotation.range.clone(),
+                                TextAttribute::Style(FontStyle::Italic),
+                            )
+                        }
+                        Style::Font(font) => {
+                            if let Some(font) = ctx.text().font_family(&font) {
+                                text = text.range_attribute(
+                                    annotation.range.clone(),
+                                    TextAttribute::FontFamily(font),
+                                )
+                            }
+                        }
+                        Style::Size(factor) => {
+                            text = text.range_attribute(
+                                annotation.range.clone(),
+                                TextAttribute::FontSize(theme.text_size * factor),
+                            )
                         }
                     }
-                    Style::Size(factor) => {
-                        text = text.range_attribute(
-                            annotation.range,
-                            TextAttribute::FontSize(theme.text_size * factor),
-                        )
-                    }
                 }
-            }
 
-            let text = text.build().unwrap();
+                text.build().unwrap()
+            })
+            .collect();
 
+        ctx.draw_breaking_text(&texts[0], border);
+
+        if let Some(text) = texts.get(1) {
             ctx.draw_breaking_text(
                 &text,
                 (
