@@ -29,50 +29,52 @@ impl<'a> CardTrait for Card<'a> {
 
         ctx.fill(area, &theme.background);
 
-        let texts: Vec<_> = vec![Some(self.annotated_top()), self.annotated_bottom()]
+        let texts: Vec<_> = vec![self.annotated_top(), self.annotated_bottom()]
             .iter()
-            .filter_map(|e| e.as_ref())
-            .fuse()
-            .map(|(source, annotations)| {
-                let mut text = ctx
-                    .new_text_layout(source.to_owned())
-                    .font(theme.font.to_owned(), theme.text_size)
-                    .alignment(TextAlignment::Start)
-                    .text_color(theme.color)
-                    .max_width(area.width() - border.x * 2.0);
+            .map(|e| {
+                e.as_ref().map(|(source, annotations)| {
+                    let mut text = ctx
+                        .new_text_layout(source.to_owned())
+                        .font(theme.font.to_owned(), theme.text_size)
+                        .alignment(TextAlignment::Start)
+                        .text_color(theme.color)
+                        .max_width(area.width() - border.x * 2.0);
 
-                for annotation in annotations {
-                    match &annotation.style {
-                        Style::Italic => {
-                            text = text.range_attribute(
-                                annotation.range.clone(),
-                                TextAttribute::Style(FontStyle::Italic),
-                            )
-                        }
-                        Style::Font(family) => {
-                            if let Some(font) = ctx.text().font_family(&family) {
+                    for annotation in annotations {
+                        match &annotation.style {
+                            Style::Italic => {
                                 text = text.range_attribute(
                                     annotation.range.clone(),
-                                    TextAttribute::FontFamily(font),
+                                    TextAttribute::Style(FontStyle::Italic),
+                                )
+                            }
+                            Style::Font(family) => {
+                                if let Some(font) = ctx.text().font_family(&family) {
+                                    text = text.range_attribute(
+                                        annotation.range.clone(),
+                                        TextAttribute::FontFamily(font),
+                                    )
+                                }
+                            }
+                            Style::Size(factor) => {
+                                text = text.range_attribute(
+                                    annotation.range.clone(),
+                                    TextAttribute::FontSize(theme.text_size * factor),
                                 )
                             }
                         }
-                        Style::Size(factor) => {
-                            text = text.range_attribute(
-                                annotation.range.clone(),
-                                TextAttribute::FontSize(theme.text_size * factor),
-                            )
-                        }
                     }
-                }
 
-                text.build().unwrap()
+                    text.build().unwrap()
+                })
             })
             .collect();
 
-        ctx.draw_breaking_text(&texts[0], border);
+        if let Some(Some(text)) = texts.get(0) {
+            ctx.draw_breaking_text(&text, border);
+        }
 
-        if let Some(text) = texts.get(1) {
+        if let Some(Some(text)) = texts.get(1) {
             ctx.draw_breaking_text(
                 &text,
                 (

@@ -174,15 +174,18 @@ impl Display for Markup<'_> {
 impl Card<'_> {
     /// Returns the content of the card as a string of plain text and a list of style annotations.
     /// This is useful for rendering the card with a GUI toolkit.
-    pub fn annotated_top(&self) -> (String, Vec<StyleAnnotation>) {
+    pub fn annotated_top(&self) -> Option<(String, Vec<StyleAnnotation>)> {
         let mut render = String::new();
         let mut annotations = Vec::new();
 
-        Card::styled_segments(&self.content, &mut render, &mut annotations);
-
-        annotations.sort();
-
-        (render, annotations)
+        match &self.content.first() {
+            Some(Markup::Bottom(_)) | None => None,
+            _ => {
+                Card::styled_segments(&self.content, &mut render, &mut annotations);
+                annotations.sort();
+                Some((render, annotations))
+            }
+        }
     }
 
     pub fn annotated_bottom(&self) -> Option<(String, Vec<StyleAnnotation>)> {
@@ -311,7 +314,7 @@ mod test {
             ],
         };
 
-        let (render, annotations) = card.annotated_top();
+        let (render, annotations) = card.annotated_top().unwrap();
 
         assert_eq!(render, "Hello____World! Italic inside Tiny ____Italic");
         assert_eq!(&"Hello____World"[9..14], "World");
@@ -346,7 +349,7 @@ mod test {
             ],
         };
 
-        let (render, _) = card.annotated_top();
+        let (render, _) = card.annotated_top().unwrap();
         assert_eq!(render, "Glück");
 
         let (render, annotations) = card.annotated_bottom().unwrap();
