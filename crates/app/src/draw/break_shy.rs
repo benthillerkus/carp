@@ -195,12 +195,13 @@ impl<T: TextLayoutBuilder> TextLayoutBuilder for BreakingTextLayoutBuilder<T> {
                                 .iter()
                                 .fold(layout, |acc, curr| acc.default_attribute(curr.clone()));
 
-                            let layout =
-                                self.attributes
-                                    .iter()
-                                    .fold(layout, |acc, (range, attribute)| {
-                                        acc.range_attribute(range.clone(), attribute.clone())
-                                    });
+                            let layout = self
+                                .attributes
+                                .iter()
+                                .filter(|(range, _)| range.contains(&offset))
+                                .fold(layout, |acc, (range, attribute)| {
+                                    acc.range_attribute(range.clone(), attribute.clone())
+                                });
 
                             result.push((layout.build()?, hit.point + (0.0f64, -metric.baseline)));
 
