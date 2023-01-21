@@ -1,10 +1,7 @@
 use carp::{
-    artifact::Amount,
-    dimensions::Dimensions,
-    export::{Export, PNGExporter},
-    renderer::ImageRenderer,
-    tts::TTS,
+    artifact::Amount, dimensions::Dimensions, export::Export, renderer::ImageRenderer, tts::TTS,
 };
+use carp_export_png::PNGExporter;
 use clap::Parser;
 use color_eyre::Result;
 use dotenvy::dotenv;

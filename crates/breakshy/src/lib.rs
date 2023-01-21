@@ -1,14 +1,12 @@
 use piet_common::{kurbo::Point, *};
 use std::ops::Range;
-const SHY: char = '\u{AD}';
+pub const SHY: char = '\u{AD}';
 
-pub trait BreakShyWithDash: RenderContext {
+pub trait DashBreakShy: RenderContext {
     fn new_text_layout(
         &mut self,
         text: impl TextStorage,
-    ) -> BreakingTextLayoutBuilder<
-        <<Self as piet_common::RenderContext>::Text as Text>::TextLayoutBuilder,
-    >;
+    ) -> BreakingTextLayoutBuilder<<<Self as RenderContext>::Text as Text>::TextLayoutBuilder>;
 
     fn draw_breaking_text(
         &mut self,
@@ -17,13 +15,11 @@ pub trait BreakShyWithDash: RenderContext {
     );
 }
 
-impl<T: RenderContext> BreakShyWithDash for T {
+impl<T: RenderContext> DashBreakShy for T {
     fn new_text_layout(
         &mut self,
         text: impl TextStorage,
-    ) -> BreakingTextLayoutBuilder<
-        <<T as piet_common::RenderContext>::Text as piet_common::Text>::TextLayoutBuilder,
-    > {
+    ) -> BreakingTextLayoutBuilder<<<T as RenderContext>::Text as Text>::TextLayoutBuilder> {
         let dashes = text
             .as_str()
             .split(SHY)

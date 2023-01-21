@@ -1,11 +1,9 @@
 [package]
-name = "carp-export-s3"
+name = "piet-break-shy-dash"
 version = "0.0.0"
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-rust-s3 = { workspace = true }
-carp = { workspace = true }
-ulid = "1.0.0"
+piet-common = { workspace = true }

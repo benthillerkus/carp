@@ -1,13 +1,12 @@
+use carp::piet_common::{kurbo::Point, *};
 use carp::{dimensions::Dimensions, Card as CardTrait};
-use piet_common::{kurbo::Point, *};
 
 use crate::{
     format::{self, Card, Deck, Style},
     theme::Theme,
 };
 
-mod break_shy;
-use break_shy::BreakShyWithDash;
+use piet_break_shy_dash::DashBreakShy;
 
 impl<'a> CardTrait for Card<'a> {
     type Deck = Deck<'a>;

@@ -210,8 +210,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "carp-export-png"
+version = "0.0.0"
+dependencies = [
+ "carp",
+ "log",
+ "mtpng",
+]
+
+[[package]]
 name = "carp-export-s3"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "carp",
  "rust-s3",
@@ -850,9 +859,10 @@ dependencies = [
 
 [[package]]
 name = "karten"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "carp",
+ "carp-export-png",
  "carp-export-s3",
  "clap",
  "color-eyre",
@@ -860,7 +870,7 @@ dependencies = [
  "env_logger",
  "log",
  "once_cell",
- "piet-common",
+ "piet-break-shy-dash",
  "roxmltree",
  "rust-s3",
  "tts-external-api",
@@ -1088,6 +1098,13 @@ checksum = "ddd2a0027c9ea84b51f42ea3148864e6fc58970ad927e78390d5f9cf7cfa2c78"
 dependencies = [
  "kurbo",
  "unic-bidi",
+]
+
+[[package]]
+name = "piet-break-shy-dash"
+version = "0.0.0"
+dependencies = [
+ "piet-common",
 ]
 
 [[package]]

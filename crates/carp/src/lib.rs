@@ -18,6 +18,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub use {
     card::{Card, Side},
     deck::{Backside, Deck},
+    piet_common
 };
 
 mod card {

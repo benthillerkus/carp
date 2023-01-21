@@ -9,6 +9,8 @@ repository = "https://github.com/benthillerkus/karten"
 [workspace.dependencies]
 carp = { path = "crates/carp" }
 carp-export-s3 = { path = "crates/s3" }
+carp-export-png = { path = "crates/png" }
+piet-break-shy-dash = { path = "crates/breakshy" }
 karten = { path = "crates/karten" }
 log = "0.4.17"
 piet-common = "0.6.0"
