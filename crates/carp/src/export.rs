@@ -1,9 +1,4 @@
-use std::{
-    error::Error,
-    fs::{self, File},
-    io::Write,
-    path::PathBuf,
-};
+use std::{error::Error, fs::File, io::Write, path::PathBuf};
 
 use mtpng::{
     encoder::{Encoder, Options},
@@ -24,7 +19,10 @@ pub trait Export {
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>>;
 }
 
+/// An exporter that writes files to disk.
+/// It takes Bytes and writes them as files in the given directory.
 pub struct FileExporter {
+    /// The directory in which files will be placed.
     pub directory: PathBuf,
 }
 
@@ -36,11 +34,7 @@ impl Export for FileExporter {
         &self,
         artifact: Artifact<Self::Data>,
     ) -> Result<Artifact<Self::Output>, Box<dyn Error>> {
-        if let Some(parent) = self.directory.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        let mut path = self.directory.with_file_name(artifact.to_string());
+        let mut path = self.directory.join(artifact.to_string());
 
         if let Some(ref fileformat) = artifact.extension {
             path = path.with_extension(fileformat);
@@ -56,6 +50,7 @@ impl Export for FileExporter {
         })
     }
 }
+
 pub struct PNGExporter;
 
 impl Export for PNGExporter {

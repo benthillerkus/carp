@@ -7,16 +7,16 @@ use carp::{
 use carp::{BASE_ASPECT_RATIO, BASE_RESOLUTION};
 use carp_export_s3::S3Exporter;
 use clap::{Parser, Subcommand};
-use color_eyre::{eyre::Context, Help, Result};
+use color_eyre::{
+    eyre::{eyre, Context},
+    Help, Result,
+};
 use s3::{creds::Credentials, Bucket, Region};
-use std::{path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf, str::FromStr};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub(crate) struct Args {
-    #[command(subcommand)]
-    pub output: Option<Output>,
-
     /// The aspect ratio of a single card.
     ///
     /// The aspect ratio is defined as width / height.
@@ -34,14 +34,22 @@ pub(crate) struct Args {
     /// Whether to sync the deck into the Tabletop Simulator.
     #[arg(short, long, default_value_t = false)]
     pub sync_to_tts: bool,
+
+    /// Where should the deck be exported to?
+    #[command(subcommand)]
+    pub output: Option<Output>,
 }
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Output {
     /// Export the deck to a directory.
     Disk {
-        #[arg(short, long, default_value = "export/")]
+        #[arg(short, long, default_value = "export", env)]
         directory: PathBuf,
+
+        /// Whether to create the directory if it doesn't exist.
+        #[arg(long)]
+        create: bool,
     },
     /// Upload the deck into an S3 (compatible) bucket.
     S3 {
@@ -74,7 +82,8 @@ pub(crate) enum Output {
 impl Default for Output {
     fn default() -> Self {
         Output::Disk {
-            directory: PathBuf::from("export/"),
+            directory: PathBuf::from("export"),
+            create: true,
         }
     }
 }
@@ -82,13 +91,22 @@ impl Default for Output {
 impl Output {
     pub fn exporter(self) -> Result<Box<dyn Export<Data = Vec<u8>, Output = PathBuf>>> {
         match self {
-            Output::Disk { mut directory } => {
-                directory.push("nofile");
-                let directory = if directory.is_relative() {
-                    std::env::current_dir()?.join(directory)
-                } else {
-                    directory
-                };
+            Output::Disk { directory, create } => {
+                if create {
+                    fs::create_dir_all(&directory)?;
+                } else if !directory.is_dir() {
+                    Err(eyre!(
+                        "the directory {:?} doesn't exist {}. Use --create to create it",
+                        directory,
+                        if directory.is_relative() {
+                            format!("in {}", std::env::current_dir()?.display())
+                        } else {
+                            String::new()
+                        }
+                    ))?
+                }
+
+                let directory = directory.canonicalize()?;
 
                 Ok(Box::new(FileExporter { directory }))
             }
