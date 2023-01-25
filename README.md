@@ -10,6 +10,42 @@ Additionally there is a sample [App](crates/app) that can load `xml` files descr
 
 If you're looking for a more fleshed-out tool, check out [eldstal/cardcinogen](https://github.com/eldstal/cardcinogen) or perhaps [decker](https://splizard.com/magic/decker)
 
+# Features
+
+## lib
+
+- traits for decks and cards
+- render cards with any aspect ratio into grids of 70 cards
+- compress cards, backsides and sheets to PNGs and store on disk or on s3
+- modular and multi-threadable design
+
+## app
+
+- custom XML based format for decks of cards
+- load cards from files & directories
+- per default *Cards Against Humanity* style rendering of cards
+
+# XML
+
+The deck files used by the app are defined as such:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE deck [
+  <!ENTITY shy "­">
+]> <!-- &shy; marks places where the text layout is allowed to break text -->
+<deck name="this is required" back="shared"> <!--shared = each card in the deck has the same back (the opposite would be *unique*)-->
+  <card>Text can be <i>italic and in a <font family="Roboto">specific Font</font></i></card>
+  <card>You can have text on top<bottom>and on the bottom</bottom></card>
+  <card>Lines can be broken like
+this
+or like<br>this</card>
+</deck>
+```
+
+
+As of right now, this format is implemented for the default app and unrelated to the `carp` library. If you want specific attributes or use something like JSON, you'll have to modify the code -- this is a template and not a ready-made product after all.
+
 # Remaining Issues
 
 - add renderers for the other platforms `piet_common` supports
