@@ -39,7 +39,7 @@ The deck files used by the app are defined as such:
   <card>You can have text on top<bottom>and on the bottom</bottom></card>
   <card>Lines can be broken like
 this
-or like<br>this</card>
+or like<br>this and very long words like Donau&shy;dampf&shy;schiffahrts&shy;kapitän can be broken as such</card>
 </deck>
 ```
 
