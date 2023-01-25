@@ -1,5 +1,5 @@
 use super::{
-    error::{Error, ErrorKind},
+    error::{Error, Kind},
     *,
 };
 use roxmltree::{Document, Node};
@@ -36,13 +36,13 @@ impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
             name: node
                 .attribute("name")
                 .map(|name| Cow::Owned(name.to_owned()))
-                .ok_or_else(|| Error::from(ErrorKind::MissingDeckName))?,
+                .ok_or_else(|| Error::from(Kind::MissingDeckName))?,
             theme: node
                 .attribute("theme")
-                .map_or(Ok(Default::default()), |s| match s {
+                .map_or(Ok(Theme::default()), |s| match s {
                     "light" | "Light" | "LIGHT" => Ok(Theme::Light),
                     "dark" | "Dark" | "DARK" => Ok(Theme::Dark),
-                    value => Err(Error::from(ErrorKind::InvalidAttribueValue {
+                    value => Err(Error::from(Kind::InvalidAttribueValue {
                         tag: "deck".into(),
                         attribute: "theme".into(),
                         value: String::from(value),
@@ -51,10 +51,10 @@ impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
                 })?,
             back: node
                 .attribute("back")
-                .map_or(Ok(Default::default()), |s| match s {
+                .map_or(Ok(Backside::default()), |s| match s {
                     "shared" => Ok(Backside::Shared),
                     "unique" => Ok(Backside::Unique),
-                    value => Err(Error::from(ErrorKind::InvalidAttribueValue {
+                    value => Err(Error::from(Kind::InvalidAttribueValue {
                         tag: "deck".into(),
                         attribute: "back".into(),
                         value: value.into(),
@@ -83,12 +83,7 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
     type Error = Error;
 
     fn try_from(node: Node<'_, 'a>) -> Result<Self, Self::Error> {
-        if !node.has_tag_name("card") {
-            Err(Error::from(ErrorKind::UnexpectedTag {
-                expected: "card".into(),
-                actual: node.tag_name().name().to_owned(),
-            }))
-        } else {
+        if node.has_tag_name("card") {
             let mut result = Self {
                 content: {
                     let mut result = Vec::new();
@@ -102,6 +97,11 @@ impl<'a> TryFrom<Node<'_, 'a>> for Card<'a> {
             };
             result.cleanup();
             Ok(result)
+        } else {
+            Err(Error::from(Kind::UnexpectedTag {
+                expected: "card".into(),
+                actual: node.tag_name().name().to_owned(),
+            }))
         }
     }
 }
@@ -205,7 +205,7 @@ mod tests {
             Deck {
                 name: "My Name".into(),
                 theme: Theme::Dark,
-                back: Default::default(),
+                back: Backside::default(),
                 cards: vec![
                     Card {
                         content: vec![

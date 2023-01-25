@@ -41,8 +41,8 @@ impl TTS {
                         shared: deck.share_back(),
                         content: Content::Single,
                         amount: Amount::Single,
-                        aspect_ratio: Default::default(),
-                        extension: Default::default(),
+                        aspect_ratio: None,
+                        extension: None,
                     })
             }))
         } else {

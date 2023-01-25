@@ -129,7 +129,7 @@ impl Output {
                         }
                     } else {
                         Region::from_str(&s3_region).with_context(|| {
-                            format!("couldn't parse a S3 Region from {}", s3_region)
+                            format!("couldn't parse a S3 Region from {s3_region}")
                         })?
                     },
                     Credentials::from_env()

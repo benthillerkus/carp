@@ -15,8 +15,8 @@ impl<'a> Deck<format::Card<'a>> for format::Deck<'a> {
 
     /// This is just a getter for the type of [Backside] the [Deck] uses.
     /// 
-    /// The back of a card can either be the same across a [Deck] ([Backside::Shared])
-    /// or each [Card] can have its own backside ([Backside::Unique]).
+    /// The back of a card can either be the same across a [Deck] -> [`Backside::Shared`]
+    /// or each [Card] can have its own backside -> [`Backside::Unique`].
     fn share_back(&self) -> Backside {
         self.back
     }

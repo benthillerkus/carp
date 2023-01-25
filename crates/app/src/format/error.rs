@@ -1,7 +1,7 @@
 use color_eyre::{eyre::eyre, Report};
 
 #[derive(Debug, PartialEq)]
-pub enum ErrorKind {
+pub enum Kind {
     MissingDeckName,
     UnexpectedTag {
         expected: String,
@@ -18,7 +18,7 @@ pub enum ErrorKind {
 
 #[derive(Debug)]
 pub struct Error {
-    pub kind: ErrorKind,
+    pub kind: Kind,
     source: Report,
 }
 
@@ -37,8 +37,8 @@ impl From<roxmltree::Error> for Error {
         let kind = match error.clone() {
             XmlError::UnexpectedCloseTag {
                 expected, actual, ..
-            } => ErrorKind::UnexpectedTag { expected, actual },
-            _ => ErrorKind::Parse,
+            } => Kind::UnexpectedTag { expected, actual },
+            _ => Kind::Parse,
         };
 
         Self {
@@ -48,8 +48,8 @@ impl From<roxmltree::Error> for Error {
     }
 }
 
-impl From<ErrorKind> for Error {
-    fn from(kind: ErrorKind) -> Self {
+impl From<Kind> for Error {
+    fn from(kind: Kind) -> Self {
         Self {
             source: eyre!(kind.to_string()),
             kind,
@@ -57,7 +57,7 @@ impl From<ErrorKind> for Error {
     }
 }
 
-impl std::fmt::Display for ErrorKind {
+impl std::fmt::Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingDeckName => {

@@ -29,20 +29,12 @@ pub struct Card<'a> {
 
 impl Card<'_> {
     pub fn cleanup(&mut self) {
-        let _ = self
-            .content
-            .first_mut()
-            .map(|markup| markup.trim_start())
-            .is_some();
-        let _ = self
-            .content
-            .last_mut()
-            .map(|markup| markup.trim_end())
-            .is_some();
+        let _ = self.content.first_mut().map(Markup::trim_start).is_some();
+        let _ = self.content.last_mut().map(Markup::trim_end).is_some();
         self.content.iter_mut().for_each(|markup| {
             if let Markup::Bottom(c) = markup {
-                let _ = c.first_mut().map(|markup| markup.trim_start()).is_some();
-                let _ = c.last_mut().map(|markup| markup.trim_end()).is_some();
+                let _ = c.first_mut().map(Markup::trim_start).is_some();
+                let _ = c.last_mut().map(Markup::trim_end).is_some();
             }
         });
 
@@ -53,7 +45,7 @@ impl Card<'_> {
 impl Display for Card<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for markup in &self.content {
-            write!(f, "{}", markup)?;
+            write!(f, "{markup}")?;
         }
         Ok(())
     }
@@ -84,10 +76,11 @@ impl Markup<'_> {
             Markup::Plain(Cow::Borrowed(b)) => b.is_empty(),
             Markup::Plain(Cow::Owned(s)) => s.is_empty(),
             Markup::Blank => false,
-            Markup::Italic(content) | Markup::Tiny(content) => content.is_empty(),
-            Markup::Bottom(content) => content.is_empty(),
-            Markup::Unknown { content, .. } => content.is_empty(),
-            Markup::Font { content, .. } => content.is_empty(),
+            Markup::Italic(content)
+            | Markup::Tiny(content)
+            | Markup::Bottom(content)
+            | Markup::Unknown { content, .. }
+            | Markup::Font { content, .. } => content.is_empty(),
         }
     }
 
@@ -129,12 +122,12 @@ impl Display for Markup<'_> {
     /// This is not meant to be parsed back into a card.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Markup::Plain(text) => write!(f, "{}", text),
+            Markup::Plain(text) => write!(f, "{text}"),
             Markup::Blank => write!(f, "____"),
             Markup::Italic(content) | Markup::Tiny(content) => {
                 write!(f, "*")?;
                 for markup in content {
-                    write!(f, "{}", markup)?;
+                    write!(f, "{markup}")?;
                 }
                 write!(f, "*")
             }
@@ -142,7 +135,7 @@ impl Display for Markup<'_> {
                 writeln!(f)?;
                 writeln!(f)?;
                 for markup in content {
-                    write!(f, "{}", markup)?;
+                    write!(f, "{markup}")?;
                 }
                 Ok(())
             }
@@ -157,13 +150,13 @@ impl Display for Markup<'_> {
                 }
                 write!(f, ">")?;
                 for markup in content {
-                    write!(f, "{}", markup)?;
+                    write!(f, "{markup}")?;
                 }
-                write!(f, "</{}>", tag)
+                write!(f, "</{tag}>")
             }
             Markup::Font { content, .. } => {
                 for markup in content {
-                    write!(f, "{}", markup)?;
+                    write!(f, "{markup}")?;
                 }
                 Ok(())
             }

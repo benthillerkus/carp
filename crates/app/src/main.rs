@@ -70,7 +70,7 @@ fn main() -> Result<()> {
             let deck = format::Deck::try_from(s.as_ref()).unwrap();
 
             let deck = TTS::build(&deck, &renderer)
-                .map(|e| e.unwrap())
+                .map(Result::unwrap)
                 .map(|artifact| pngexporter.export(artifact).unwrap())
                 .map(|a| exporter.export(a).unwrap());
 
