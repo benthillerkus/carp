@@ -38,20 +38,32 @@ fn main() -> Result<()> {
     let pngexporter = PNGExporter;
 
     // Run pipeline
-    let input = fs::read_dir("input")?;
-    input
-        .filter_map(|entry| {
-            if let Ok(entry) = entry {
-                if let Ok(true) = entry.file_type().map(|t| t.is_file()) {
-                    let path = entry.path();
+    args.input
+        .iter()
+        .filter_map(|source| {
+            if source.is_dir() {
+                let files = fs::read_dir(source).unwrap().filter_map(|entry| {
+                    if let Ok(entry) = entry {
+                        if let Ok(true) = entry.file_type().map(|t| t.is_file()) {
+                            let path = entry.path();
 
-                    if let Some(true) = path.extension().map(|ext| ext == "xml" || ext == "deck") {
-                        return Some(path);
+                            if let Some(true) =
+                                path.extension().map(|ext| ext == "xml" || ext == "deck")
+                            {
+                                return Some(path);
+                            }
+                        }
                     }
-                }
+                    None
+                });
+                Some(Box::new(files) as Box<dyn Iterator<Item = _>>)
+            } else if source.is_file() {
+                Some(Box::new(std::iter::once(source.clone())))
+            } else {
+                None
             }
-            None
         })
+        .flatten()
         .map(fs::read_to_string)
         .filter_map(Result::ok)
         .map(|s| {

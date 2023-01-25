@@ -22,18 +22,22 @@ pub(crate) struct Args {
     /// The aspect ratio is defined as width / height.
     /// 1.0 is square, 2.0 is twice as wide as it is tall, etc.
     /// The default is the 5/7.2 ratio prefered by Tabletop Simulator.
-    #[arg(short, long, default_value_t = BASE_ASPECT_RATIO)]
+    #[arg(short, long, env, default_value_t = BASE_ASPECT_RATIO)]
     pub aspect_ratio: AspectRatio,
 
     /// The image resolution for the deck.
     /// On non-square aspect ratios, this value determines the longer side,
     /// so the image can never be larger than resolution².
-    #[arg(short, long, default_value_t = BASE_RESOLUTION)]
+    #[arg(short, long, env, default_value_t = BASE_RESOLUTION)]
     pub resolution: u32,
 
     /// Whether to sync the deck into the Tabletop Simulator.
     #[arg(short, long, default_value_t = false)]
     pub sync_to_tts: bool,
+
+    /// The deck template .xml files to load.
+    #[arg(short, long, env)]
+    pub input: Vec<PathBuf>,
 
     /// Where should the deck be exported to?
     #[command(subcommand)]

@@ -4,7 +4,7 @@ members = ["crates/*"]
 [workspace.package]
 edition = "2021"
 authors = ["Bent Hillerkus"]
-repository = "https://github.com/benthillerkus/karten"
+repository = "https://github.com/benthillerkus/carp"
 
 [workspace.dependencies]
 carp = { path = "crates/carp" }
