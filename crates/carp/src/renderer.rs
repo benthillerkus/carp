@@ -35,7 +35,7 @@ impl<T: RenderContext> Clone for ImageRenderer<T> {
 }
 
 impl<T: RenderContext> ImageRenderer<T> {
-    pub fn new(dimensions: Dimensions) -> Self {
+    #[must_use] pub fn new(dimensions: Dimensions) -> Self {
         Self {
             device_pool: Pool::default(),
             dimensions,

@@ -48,7 +48,7 @@ impl<'a> CardTrait for Card<'a> {
                                 )
                             }
                             Style::Font(family) => {
-                                if let Some(font) = ctx.text().font_family(&family) {
+                                if let Some(font) = ctx.text().font_family(family) {
                                     text = text.range_attribute(
                                         annotation.range.clone(),
                                         TextAttribute::FontFamily(font),
@@ -70,12 +70,12 @@ impl<'a> CardTrait for Card<'a> {
             .collect();
 
         if let Some(Some(text)) = texts.get(0) {
-            ctx.draw_breaking_text(&text, border);
+            ctx.draw_breaking_text(text, border);
         }
 
         if let Some(Some(text)) = texts.get(1) {
             ctx.draw_breaking_text(
-                &text,
+                text,
                 (
                     border.x,
                     dimensions.card.height - border.y - text.image_bounds().height(),

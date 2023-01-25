@@ -36,7 +36,7 @@ impl<'a, 'input> TryFrom<Node<'a, 'input>> for Deck<'input> {
             name: node
                 .attribute("name")
                 .map(|name| Cow::Owned(name.to_owned()))
-                .ok_or(Error::from(ErrorKind::MissingDeckName))?,
+                .ok_or_else(|| Error::from(ErrorKind::MissingDeckName))?,
             theme: node
                 .attribute("theme")
                 .map_or(Ok(Default::default()), |s| match s {

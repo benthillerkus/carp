@@ -18,7 +18,7 @@ impl Default for Pool {
 }
 
 impl Pool {
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         let v = AppendOnlyVec::new();
         Self {
             devices: Arc::new(v),

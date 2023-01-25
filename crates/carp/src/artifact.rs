@@ -15,7 +15,7 @@ impl Display for Content {
                 rows,
                 columns,
                 total,
-            } => write!(f, "r{}c{}t{}", rows, columns, total),
+            } => write!(f, "r{rows}c{columns}t{total}"),
         }
     }
 }
@@ -30,7 +30,7 @@ impl Display for Amount {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Amount::Single => write!(f, "1of1"),
-            Amount::Multiple { index, total } => write!(f, "{}of{}", index, total),
+            Amount::Multiple { index, total } => write!(f, "{index}of{total}"),
         }
     }
 }

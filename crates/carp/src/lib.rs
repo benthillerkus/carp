@@ -68,7 +68,7 @@ mod deck {
 
     use super::Card as CardTrait;
 
-    /// The back of a card can be the same across a [Deck] ([Backside::Shared]) or each [Card] can have its own one ([Backside::Unique]).
+    /// The back of a card can be the same across a [Deck] ([`Backside::Shared`]) or each [Card] can have its own one ([`Backside::Unique`]).
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     pub enum Backside {
         #[default]

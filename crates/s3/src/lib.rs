@@ -9,7 +9,7 @@ pub struct S3Exporter {
 }
 
 impl S3Exporter {
-    pub fn new(bucket: Bucket) -> Self {
+    #[must_use] pub fn new(bucket: Bucket) -> Self {
         Self { bucket }
     }
 }
@@ -28,7 +28,7 @@ impl Export for S3Exporter {
             Ulid::new().to_string()
         };
         self.bucket.put_object(filename.clone(), &artifact.data)?;
-        let artifact = artifact.clone();
+        let artifact = artifact;
         Ok(artifact.with_data(Path::new(&self.bucket.url()).join(filename)))
     }
 }

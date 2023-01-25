@@ -143,11 +143,7 @@ impl<T: TextLayoutBuilder> TextLayoutBuilder for BreakingTextLayoutBuilder<T> {
         range: impl std::ops::RangeBounds<usize>,
         attribute: impl Into<TextAttribute>,
     ) -> Self {
-        let start_ok = match range.start_bound() {
-            std::ops::Bound::Included(0) => true,
-            std::ops::Bound::Unbounded => true,
-            _ => false,
-        };
+        let start_ok = matches!(range.start_bound(), std::ops::Bound::Included(0) | std::ops::Bound::Unbounded);
 
         let end_ok = match range.end_bound() {
             std::ops::Bound::Included(b) if (*b - 1) >= self.text_length => true,

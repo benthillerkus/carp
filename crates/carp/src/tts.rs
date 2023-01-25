@@ -121,8 +121,8 @@ impl TTS {
             ctx.with_save(|ctx| {
                 let sheet_index = index as u32;
                 ctx.transform(Affine::translate((
-                    (sheet_index % COLUMNS) as f64 * dimensions.card.width,
-                    (sheet_index / COLUMNS) as f64 * dimensions.card.height,
+                    f64::from(sheet_index % COLUMNS) * dimensions.card.width,
+                    f64::from(sheet_index / COLUMNS) * dimensions.card.height,
                 )));
                 ctx.clip(border);
                 let deck_index = page * (ROWS * COLUMNS);
