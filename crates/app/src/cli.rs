@@ -164,9 +164,14 @@ impl Output {
                         )
                     })
                     .with_suggestion(|| {
+                        let credentials = bucket.credentials.read().unwrap();
+
                         format!(
                             "does {:?} have the permission `s3:GetBucketLocation`?",
-                            bucket.credentials().access_key
+                            credentials
+                                .access_key
+                                .as_deref()
+                                .unwrap_or("[there's no access key?]")
                         )
                     })?;
 

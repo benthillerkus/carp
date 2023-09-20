@@ -1,5 +1,6 @@
 [workspace]
 members = ["crates/*"]
+resolver = "2"
 
 [workspace.package]
 edition = "2021"
@@ -14,7 +15,7 @@ piet-break-shy-dash = { path = "crates/breakshy" }
 karten = { path = "crates/karten" }
 log = "0.4.17"
 piet-common = "0.6.0"
-rust-s3 = { version = "0.32.3", default-features = false, features = [
+rust-s3 = { version = "0.33.0", default-features = false, features = [
   "sync-rustls-tls",
 ] }
 

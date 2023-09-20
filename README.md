@@ -25,6 +25,23 @@ If you're looking for a more fleshed-out tool, check out [eldstal/cardcinogen](h
 - load cards from files & directories
 - per default *Cards Against Humanity* style rendering of cards
 
+Configuration can be done via command line arguments, environment variables and `.env` files.
+
+This is the shape of a `.env` file:
+```env
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+S3_BUCKET=
+S3_REGION=
+S3_ENDPOINT=
+S3_PATH_STYLE= // bool, false is subdomain style
+RUST_LIB_BACKTRACE=full
+RUST_LOG=info
+INPUT= // path to folder with xml files
+```
+
+(note to self): You can start the app by running `cargo run --release -- -s s3` in the workspace main directory!
+
 # XML
 
 The deck files used by the app are defined as such:
