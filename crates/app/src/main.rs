@@ -27,8 +27,12 @@ fn main() -> Result<()> {
             color_eyre::ErrorKind::NonRecoverable(_) => true,
         })
         .install()?;
-    dotenv()?;
+    let env = dotenv();
     env_logger::init();
+    if let Err(e) = env {
+        eprintln!("Couldn\'t load a .env file with configuration info: {}", e);
+    }
+
     let args = cli::Args::parse();
 
     // Configure pipeline

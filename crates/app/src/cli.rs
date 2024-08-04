@@ -36,7 +36,7 @@ pub(crate) struct Args {
     pub sync_to_tts: bool,
 
     /// The deck template .xml files to load.
-    #[arg(short, long, env)]
+    #[arg(short, long, env, default_value = "input")]
     pub input: Vec<PathBuf>,
 
     /// Where should the deck be exported to?
