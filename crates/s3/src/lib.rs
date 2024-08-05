@@ -28,7 +28,6 @@ impl Export for S3Exporter {
             Ulid::new().to_string()
         };
         self.bucket.put_object(filename.clone(), &artifact.data)?;
-        let artifact = artifact;
         Ok(artifact.with_data(Path::new(&self.bucket.url()).join(filename)))
     }
 }

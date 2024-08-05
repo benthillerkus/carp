@@ -164,7 +164,7 @@ impl Output {
                         )
                     })
                     .with_suggestion(|| {
-                        let credentials = bucket.credentials.read().unwrap();
+                        let credentials = bucket.credentials().unwrap();
 
                         format!(
                             "does {:?} have the permission `s3:GetBucketLocation`?",

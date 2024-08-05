@@ -28,7 +28,7 @@ impl<'a> CardTrait for Card<'a> {
 
         ctx.fill(area, &theme.background);
 
-        let texts: Vec<_> = vec![self.annotated_top(), self.annotated_bottom()]
+        let texts: Vec<_> = [self.annotated_top(), self.annotated_bottom()]
             .iter()
             .map(|e| {
                 e.as_ref().map(|(source, annotations)| {
@@ -69,7 +69,7 @@ impl<'a> CardTrait for Card<'a> {
             })
             .collect();
 
-        if let Some(Some(text)) = texts.get(0) {
+        if let Some(Some(text)) = texts.first() {
             ctx.draw_breaking_text(text, border);
         }
 

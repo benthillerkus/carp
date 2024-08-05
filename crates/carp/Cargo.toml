@@ -10,5 +10,5 @@ repository.workspace = true
 [dependencies]
 append-only-vec = "0.1.2"
 log = { workspace = true }
-mtpng = "0.3.5"
+mtpng = "0.4.1"
 piet-common = { workspace = true }

@@ -33,7 +33,7 @@ impl Pool {
             match self.devices[index].try_lock() {
                 Ok(device) => Ok(device),
                 Err(std::sync::TryLockError::WouldBlock) => self.get(),
-                Err(e) => Err(e).unwrap(),
+                Err(e) => panic!("{:?}", e),
             }
         }
     }
